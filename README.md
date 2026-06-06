@@ -28,3 +28,4 @@ npm run dev
 ## 배포 (Vercel)
 GitHub 레포 연결 후 환경변수 설정하면 자동 배포
 # Sat Jun  6 20:30:33     2026
+# Updated Sat Jun  6 22:30:09     2026
