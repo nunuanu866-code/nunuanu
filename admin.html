@@ -332,15 +332,74 @@ function SFoot({children}){return <div style={{padding:'12px 20px 16px',display:
 function FF({label,children}){return <div style={{marginBottom:14}}><label className="lbl">{label}</label>{children}</div>;}
 
 // ── MiniCalendar ───────────────────────────────────────────────
-function MiniCalendar({value,onChange,onClose}){
+function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
   const[vm,setVm]=useState(()=>{const d=new Date(value);d.setDate(1);return d;});
+  const[selectedDate,setSelectedDate]=useState(null);
   const yr=vm.getFullYear(),mo=vm.getMonth();
   const firstDow=new Date(yr,mo,1).getDay();
   const daysInMo=new Date(yr,mo+1,0).getDate();
   const cells=[];
   for(let i=0;i<firstDow;i++)cells.push(null);
   for(let d=1;d<=daysInMo;d++)cells.push(new Date(yr,mo,d));
+
+  // 날짜별 확정 예약 개수 계산
+  const bookingsByDate=useMemo(()=>{
+    const map={};
+    (supaBookings||[]).filter(b=>b.status==='confirmed').forEach(b=>{
+      if(!map[b.booking_date])map[b.booking_date]=0;
+      map[b.booking_date]++;
+    });
+    return map;
+  },[supaBookings]);
+
   const navBtn=(label,fn)=><button onClick={fn} style={{width:32,height:32,border:'none',background:'transparent',fontSize:18,color:T.ink2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8}}>{label}</button>;
+
+  // 날짜 선택 시 해당 날짜 예약 목록 보기
+  const handleDateClick=(date)=>{
+    const dateStr=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    setSelectedDate(dateStr);
+  };
+
+  // 선택된 날짜의 예약 목록
+  const selectedBookings=useMemo(()=>{
+    if(!selectedDate)return[];
+    return (supaBookings||[]).filter(b=>b.booking_date===selectedDate&&b.status==='confirmed').sort((a,b)=>a.start_time.localeCompare(b.start_time));
+  },[selectedDate,supaBookings]);
+
+  const svcMap={hair:'✂️ 헤어',makeup:'💄 메이크업',both:'✨ 헤어+메이크업'};
+
+  // 리스트 뷰
+  if(selectedDate){
+    const[y,m,d]=selectedDate.split('-').map(Number);
+    return <div style={{background:T.surface,borderRadius:18,padding:16,border:`1px solid ${T.line}`,boxShadow:'0 12px 40px rgba(0,0,0,.18)',width:320,maxHeight:480,display:'flex',flexDirection:'column'}}>
+      <div style={{display:'flex',alignItems:'center',marginBottom:12}}>
+        <button onClick={()=>setSelectedDate(null)} style={{width:32,height:32,border:'none',background:'transparent',fontSize:18,color:T.ink2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8}}>‹</button>
+        <div style={{flex:1,textAlign:'center',fontSize:15,fontWeight:800}}>{m}월 {d}일 예약 목록</div>
+        <button onClick={()=>{onChange(new Date(y,m-1,d));onClose?.();}} style={{fontSize:11,fontWeight:700,padding:'6px 10px',borderRadius:8,border:`1px solid ${T.line}`,background:T.bg,cursor:'pointer',color:T.ink2}}>이동</button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8}}>
+        {selectedBookings.length===0?(
+          <div style={{textAlign:'center',padding:'40px 20px',color:T.ink3}}>
+            <div style={{fontSize:32,marginBottom:8}}>📅</div>
+            <div style={{fontSize:13,fontWeight:600}}>예약이 없습니다</div>
+          </div>
+        ):selectedBookings.map(b=>{
+          const staffName=staff?.find(s=>s.id===b.requested_staff_id)?.name||'랜덤배정';
+          return <div key={b.id} style={{background:T.bg,borderRadius:12,padding:'10px 12px',border:`1px solid ${T.line2}`}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+              <span style={{fontSize:13,fontWeight:800,color:T.ink}}>{b.start_time?.slice(0,5)} - {b.end_time?.slice(0,5)}</span>
+              <span style={{fontSize:11,fontWeight:700,padding:'2px 7px',borderRadius:999,background:'#DCFCE7',color:'#166534'}}>확정</span>
+            </div>
+            <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:2}}>{b.customers?.name}</div>
+            <div style={{fontSize:12,color:T.ink2}}>{svcMap[b.service_type]||b.service_type} · {staffName}</div>
+            {b.customer_memo&&<div style={{fontSize:11,color:'#0369A1',marginTop:4,background:'#F0F9FF',padding:'4px 8px',borderRadius:6}}>💬 {b.customer_memo}</div>}
+          </div>;
+        })}
+      </div>
+    </div>;
+  }
+
+  // 캘린더 뷰
   return <div style={{background:T.surface,borderRadius:18,padding:14,border:`1px solid ${T.line}`,boxShadow:'0 12px 40px rgba(0,0,0,.18)',width:272}}>
     <div style={{display:'flex',alignItems:'center',marginBottom:8}}>
       {navBtn('‹',()=>setVm(d=>new Date(d.getFullYear(),d.getMonth()-1,1)))}
@@ -354,7 +413,15 @@ function MiniCalendar({value,onChange,onClose}){
       {cells.map((date,i)=>{
         if(!date)return <div key={i}/>;
         const sel=sameDay(date,value),tod=isToday(date),dow=date.getDay();
-        return <button key={i} onClick={()=>{onChange(date);onClose?.();}} style={{width:'100%',aspectRatio:'1',borderRadius:8,border:tod&&!sel?`2px solid ${T.accent}`:'none',background:sel?T.ink:'transparent',color:sel?'#fff':tod?T.accent:dow===0?'#EF4444':dow===6?'#3B82F6':T.ink,fontSize:13,fontWeight:sel||tod?800:500,cursor:'pointer'}}>{date.getDate()}</button>;
+        const dateStr=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+        const bookingCount=bookingsByDate[dateStr]||0;
+        const dots=Math.min(5,bookingCount);
+        return <button key={i} onClick={()=>handleDateClick(date)} style={{width:'100%',aspectRatio:'1',borderRadius:8,border:tod&&!sel?`2px solid ${T.accent}`:'none',background:sel?T.ink:'transparent',color:sel?'#fff':tod?T.accent:dow===0?'#EF4444':dow===6?'#3B82F6':T.ink,fontSize:13,fontWeight:sel||tod?800:500,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
+          <span>{date.getDate()}</span>
+          {bookingCount>0&&<div style={{display:'flex',gap:2,marginTop:2}}>
+            {[...Array(dots)].map((_,idx)=><div key={idx} style={{width:3,height:3,borderRadius:'50%',background:sel?'#fff':'#EF4444'}}/>)}
+          </div>}
+        </button>;
       })}
     </div>
   </div>;
@@ -1657,7 +1724,7 @@ function Toast({msg,onDone}){
 }
 
 // ── Header ─────────────────────────────────────────────────────────
-function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg}){
+function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,supaBookings,staff}){
   const[showCal,setShowCal]=useState(false);
   const mo=selectedDate.getMonth()+1,dd=selectedDate.getDate(),dow=DOW_KO[selectedDate.getDay()];
   return <div style={{position:'relative',padding:`calc(env(safe-area-inset-top,0px) + 10px) 16px 10px`,borderBottom:`1px solid ${T.line}`,background:T.surface,display:'flex',alignItems:'flex-end',justifyContent:'space-between',flexShrink:0,zIndex:20}}>
@@ -1676,7 +1743,7 @@ function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg})
     {showCal&&<>
       <div onClick={()=>setShowCal(false)} style={{position:'fixed',inset:0,zIndex:30}}/>
       <div style={{position:'absolute',left:12,top:'calc(100% + 6px)',zIndex:31}}>
-        <MiniCalendar value={selectedDate} onChange={d=>{setSelectedDate(d);setShowCal(false);}}/>
+        <MiniCalendar value={selectedDate} onChange={d=>{setSelectedDate(d);setShowCal(false);}} supaBookings={supaBookings} staff={staff}/>
       </div>
     </>}
   </div>;
@@ -2140,7 +2207,7 @@ function AdminApp({onSignOut}){
       onJumpDate={date=>{setSelectedDate(new Date(date));setTab('today');}}
     />}
     {tab==='today'&&<>
-      <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={staff.length} loadingBkg={loadingBkg}/>
+      <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={staff.length} loadingBkg={loadingBkg} supaBookings={supaBookings} staff={staff}/>
       <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative'}}>
         <Timeline staff={staff} blocks={todayBlocks} highlightId={highlightId}
           onBlockTap={b=>{if(!flow)setSelectedBlock(b);}}
