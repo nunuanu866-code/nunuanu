@@ -339,6 +339,9 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
     const d=new Date(value);
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   });
+  const[searchQuery,setSearchQuery]=useState('');
+  const[searchMode,setSearchMode]=useState(false);
+
   const yr=vm.getFullYear(),mo=vm.getMonth();
   const firstDow=new Date(yr,mo,1).getDay();
   const daysInMo=new Date(yr,mo+1,0).getDate();
@@ -346,15 +349,35 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
   for(let i=0;i<firstDow;i++)cells.push(null);
   for(let d=1;d<=daysInMo;d++)cells.push(new Date(yr,mo,d));
 
-  // 날짜별 확정 예약 개수 계산
+  // 고객 검색 결과
+  const searchResults=useMemo(()=>{
+    if(!searchQuery.trim())return[];
+    const q=searchQuery.toLowerCase().replace(/-/g,'');
+    return (supaBookings||[])
+      .filter(b=>b.status==='confirmed')
+      .filter(b=>{
+        const name=b.customers?.name?.toLowerCase()||'';
+        const phone=b.customers?.phone?.replace(/-/g,'')||'';
+        return name.includes(searchQuery)||phone.includes(q);
+      })
+      .sort((a,b)=>a.booking_date.localeCompare(b.booking_date)||a.start_time.localeCompare(b.start_time));
+  },[searchQuery,supaBookings]);
+
+  // 검색 결과의 날짜들
+  const searchDates=useMemo(()=>{
+    return [...new Set(searchResults.map(b=>b.booking_date))];
+  },[searchResults]);
+
+  // 날짜별 확정 예약 개수 계산 (검색 모드일 때는 검색 결과만)
   const bookingsByDate=useMemo(()=>{
     const map={};
-    (supaBookings||[]).filter(b=>b.status==='confirmed').forEach(b=>{
+    const bookings=searchMode&&searchQuery.trim()?searchResults:(supaBookings||[]).filter(b=>b.status==='confirmed');
+    bookings.forEach(b=>{
       if(!map[b.booking_date])map[b.booking_date]=0;
       map[b.booking_date]++;
     });
     return map;
-  },[supaBookings]);
+  },[supaBookings,searchMode,searchQuery,searchResults]);
 
   const navBtn=(label,fn)=><button onClick={fn} style={{width:32,height:32,border:'none',background:'transparent',fontSize:18,color:T.ink2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8}}>{label}</button>;
 
@@ -372,18 +395,63 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
     }
   };
 
-  // 선택된 날짜의 예약 목록
+  // 선택된 날짜의 예약 목록 (검색 모드 고려)
   const selectedBookings=useMemo(()=>{
     if(!selectedDate)return[];
-    return (supaBookings||[]).filter(b=>b.booking_date===selectedDate&&b.status==='confirmed').sort((a,b)=>a.start_time.localeCompare(b.start_time));
-  },[selectedDate,supaBookings]);
+    const bookings=searchMode&&searchQuery.trim()?searchResults:(supaBookings||[]).filter(b=>b.status==='confirmed');
+    return bookings.filter(b=>b.booking_date===selectedDate).sort((a,b)=>a.start_time.localeCompare(b.start_time));
+  },[selectedDate,supaBookings,searchMode,searchQuery,searchResults]);
 
   const svcMap={hair:'✂️ 헤어',makeup:'💄 메이크업',both:'✨ 헤어+메이크업'};
 
   const[y,m,d]=selectedDate.split('-').map(Number);
 
+  // 검색 실행
+  const handleSearch=()=>{
+    if(searchQuery.trim()){
+      setSearchMode(true);
+      // 검색 결과의 첫 번째 날짜로 이동
+      if(searchDates.length>0){
+        setSelectedDate(searchDates[0]);
+        const[yy,mm]=searchDates[0].split('-').map(Number);
+        setVm(new Date(yy,mm-1,1));
+      }
+    } else {
+      setSearchMode(false);
+    }
+  };
+
+  // 검색 초기화
+  const clearSearch=()=>{
+    setSearchQuery('');
+    setSearchMode(false);
+  };
+
   // 캘린더 + 리스트 함께 표시
   return <div style={{background:T.surface,borderRadius:18,padding:14,border:`1px solid ${T.line}`,boxShadow:'0 12px 40px rgba(0,0,0,.18)',width:320,maxHeight:'80vh',display:'flex',flexDirection:'column',gap:12}}>
+    {/* 검색창 */}
+    <div style={{display:'flex',gap:6}}>
+      <div style={{flex:1,position:'relative'}}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e=>setSearchQuery(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&handleSearch()}
+          placeholder="고객명 또는 연락처 검색"
+          style={{width:'100%',height:36,borderRadius:10,border:`1.5px solid ${T.line}`,background:T.bg,padding:'0 32px 0 10px',fontSize:13,outline:'none',transition:'border .15s'}}
+          onFocus={e=>e.target.style.borderColor=T.ink}
+          onBlur={e=>e.target.style.borderColor=T.line}
+        />
+        {searchQuery&&<button onClick={clearSearch} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',width:20,height:20,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>✕</button>}
+      </div>
+      <button onClick={handleSearch} disabled={!searchQuery.trim()} style={{width:36,height:36,borderRadius:10,border:'none',background:searchQuery.trim()?T.ink:T.line,color:searchQuery.trim()?'#fff':T.ink3,fontSize:16,cursor:searchQuery.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center'}}>🔍</button>
+    </div>
+
+    {/* 검색 결과 안내 */}
+    {searchMode&&searchQuery.trim()&&<div style={{fontSize:11,fontWeight:600,color:T.accent,padding:'4px 8px',background:'#FFF0EA',borderRadius:8,textAlign:'center'}}>
+      📌 "{searchQuery}" 검색 결과: {searchResults.length}건 ({searchDates.length}일)
+    </div>}
+
     {/* 캘린더 */}
     <div>
       <div style={{display:'flex',alignItems:'center',marginBottom:8}}>
@@ -401,10 +469,11 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
           const sel=dateStr===selectedDate,tod=isToday(date),dow=date.getDay();
           const bookingCount=bookingsByDate[dateStr]||0;
           const dots=Math.min(5,bookingCount);
-          return <button key={i} onClick={()=>handleDateClick(date)} style={{width:'100%',aspectRatio:'1',borderRadius:8,border:tod&&!sel?`2px solid ${T.accent}`:'none',background:sel?T.ink:'transparent',color:sel?'#fff':tod?T.accent:dow===0?'#EF4444':dow===6?'#3B82F6':T.ink,fontSize:13,fontWeight:sel||tod?800:500,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
+          const hasSearchResult=searchMode&&searchDates.includes(dateStr);
+          return <button key={i} onClick={()=>handleDateClick(date)} style={{width:'100%',aspectRatio:'1',borderRadius:8,border:tod&&!sel?`2px solid ${T.accent}`:hasSearchResult?`2px solid #F59E0B`:'none',background:sel?T.ink:hasSearchResult?'#FEF3C7':'transparent',color:sel?'#fff':tod?T.accent:hasSearchResult?'#92400E':dow===0?'#EF4444':dow===6?'#3B82F6':T.ink,fontSize:13,fontWeight:sel||tod||hasSearchResult?800:500,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
             <span>{date.getDate()}</span>
             {bookingCount>0&&<div style={{display:'flex',gap:2,marginTop:2}}>
-              {[...Array(dots)].map((_,idx)=><div key={idx} style={{width:3,height:3,borderRadius:'50%',background:sel?'#fff':'#EF4444'}}/>)}
+              {[...Array(dots)].map((_,idx)=><div key={idx} style={{width:3,height:3,borderRadius:'50%',background:sel?'#fff':hasSearchResult?'#F59E0B':'#EF4444'}}/>)}
             </div>}
           </button>;
         })}
@@ -421,7 +490,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
         {selectedBookings.length===0?(
           <div style={{textAlign:'center',padding:'20px',color:T.ink3}}>
             <div style={{fontSize:24,marginBottom:6}}>📅</div>
-            <div style={{fontSize:12,fontWeight:600}}>예약이 없습니다</div>
+            <div style={{fontSize:12,fontWeight:600}}>{searchMode?'검색 결과가 없습니다':'예약이 없습니다'}</div>
           </div>
         ):selectedBookings.map(b=>{
           const staffName=staff?.find(s=>s.id===b.requested_staff_id)?.name||'랜덤배정';
@@ -440,7 +509,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
 
     {/* 도움말 */}
     <div style={{fontSize:10,color:T.ink3,textAlign:'center',padding:'6px 0',borderTop:`1px solid ${T.line2}`}}>
-      날짜를 다시 클릭하면 타임라인으로 이동합니다
+      {searchMode?'노란색 날짜: 검색된 예약 · ':''}날짜를 다시 클릭하면 타임라인으로 이동합니다
     </div>
   </div>;
 }
