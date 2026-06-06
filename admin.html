@@ -284,6 +284,7 @@ const ALL_TIMES=mkTimes(BK_START,BK_END);
 function timeToSlot(t){const[h,m]=t.split(':').map(Number);return((h-TL_START)*60+m)/10;}
 function slotToTime(slot){const mins=TL_START*60+Math.max(0,Math.round(slot))*10;return `${Math.floor(mins/60)}:${String(mins%60).padStart(2,'0')}`;}
 function addMin(t,d){const[h,m]=t.split(':').map(Number),tot=h*60+m+d;return `${Math.floor(tot/60)}:${String(tot%60).padStart(2,'0')}`;}
+function subtractMin(t,d){const[h,m]=t.split(':').map(Number),tot=h*60+m-d;return `${Math.floor(Math.max(0,tot)/60)}:${String(Math.max(0,tot)%60).padStart(2,'0')}`;}
 function nowStr(){const d=new Date();return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;}
 const QUICK_TIMES=Array.from({length:24},(_,i)=>`${i}:00`);
 
@@ -849,36 +850,56 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
 }
 
 function S3Time({draft,set,onNext,onBack,onClose}){
+  // 끝나는 시간을 먼저 선택
   return <Sheet onClose={onClose} step={3} totalSteps={5} onBack={onBack}>
-    <STitle title="몇 시에 시작하나요?" sub={`${dateLabel(draft.date)}·${draft.customer?.name||draft.name}`}/>
+    <STitle title="몇 시에 나가시나요?" sub={`${dateLabel(draft.date)}·${draft.customer?.name||draft.name}`}/>
     <SBody>
+      <div style={{fontSize:13,fontWeight:600,color:'#0369A1',marginBottom:12,padding:'10px 12px',background:'#F0F9FF',borderRadius:10,lineHeight:1.5}}>
+        💡 나가실 시간을 먼저 정하고, 다음 단계에서 시술 시간을 입력하면 시작 시간이 자동으로 계산됩니다.
+      </div>
       <div style={{fontSize:12,fontWeight:700,color:T.ink2,marginBottom:8}}>빠른 선택</div>
       <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:8,marginBottom:12}}>
-        {QUICK_TIMES.map(t=><button key={t} onClick={()=>set({...draft,startTime:t})} style={{height:34,padding:'0 14px',borderRadius:999,border:'none',background:draft.startTime===t?T.ink:T.line2,color:draft.startTime===t?'#fff':T.ink,fontSize:13,fontWeight:700,fontVariantNumeric:'tabular-nums',cursor:'pointer',flexShrink:0}}>{t}</button>)}
+        {QUICK_TIMES.map(t=><button key={t} onClick={()=>set({...draft,endTime:t})} style={{height:34,padding:'0 14px',borderRadius:999,border:'none',background:draft.endTime===t?T.ink:T.line2,color:draft.endTime===t?'#fff':T.ink,fontSize:13,fontWeight:700,fontVariantNumeric:'tabular-nums',cursor:'pointer',flexShrink:0}}>{t}</button>)}
       </div>
       <div style={{fontSize:12,fontWeight:700,color:T.ink2,marginBottom:8}}>세부 시간 (10분 단위)</div>
-      <TimeWheel value={draft.startTime} onChange={t=>set({...draft,startTime:t})}/>
+      <TimeWheel value={draft.endTime||draft.startTime} onChange={t=>set({...draft,endTime:t})}/>
     </SBody>
     <SFoot><PBtn onClick={onNext}>다음</PBtn></SFoot>
   </Sheet>;
 }
 
 function S4Duration({draft,set,onNext,onBack,onClose}){
-  const setDur=d=>set({...draft,duration:d,segs:[]});
+  const setDur=d=>{
+    // 끝나는 시간에서 시술 시간을 빼서 시작 시간 자동 계산
+    const endTime=draft.endTime||draft.startTime;
+    const startTime=subtractMin(endTime,d);
+    set({...draft,duration:d,startTime,segs:[]});
+  };
+
+  // 현재 계산된 시작 시간
+  const calculatedStart=draft.endTime?subtractMin(draft.endTime,draft.duration):draft.startTime;
+  const displayEnd=draft.endTime||addMin(draft.startTime,draft.duration);
+
   return <Sheet onClose={onClose} step={4} totalSteps={5} onBack={onBack}>
-    <STitle title="얼마나 걸리나요?" sub={`${draft.startTime} 시작`}/>
+    <STitle title="시술 시간은 얼마나 걸리나요?" sub={`${displayEnd} 나가기`}/>
     <SBody>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
         {DURATIONS.map(m=><button key={m} onClick={()=>setDur(m)} style={{padding:'14px 0',borderRadius:14,border:'none',background:draft.duration===m?T.ink:T.line2,color:draft.duration===m?'#fff':T.ink,fontSize:15,fontWeight:800,fontVariantNumeric:'tabular-nums',cursor:'pointer'}}>{m}분</button>)}
       </div>
       <div style={{display:'flex',alignItems:'center',gap:12,padding:14,background:T.bg,borderRadius:14,border:`1px solid ${T.line}`}}>
         <button onClick={()=>setDur(Math.max(10,draft.duration-10))} style={{width:48,height:48,borderRadius:12,border:`1px solid ${T.line}`,background:T.surface,fontSize:16,fontWeight:700}}>−10</button>
-        <div style={{flex:1,textAlign:'center'}}><div style={{fontSize:11,color:T.ink2,fontWeight:600}}>총 소요</div><div style={{fontSize:28,fontWeight:800,fontVariantNumeric:'tabular-nums',letterSpacing:-1}}>{draft.duration}분</div></div>
+        <div style={{flex:1,textAlign:'center'}}><div style={{fontSize:11,color:T.ink2,fontWeight:600}}>시술 시간</div><div style={{fontSize:28,fontWeight:800,fontVariantNumeric:'tabular-nums',letterSpacing:-1}}>{draft.duration}분</div></div>
         <button onClick={()=>setDur(Math.min(240,draft.duration+10))} style={{width:48,height:48,borderRadius:12,border:`1px solid ${T.line}`,background:T.surface,fontSize:16,fontWeight:700}}>+10</button>
       </div>
       <div style={{marginTop:12,padding:'10px 14px',borderRadius:12,border:`1px solid ${T.line}`,background:T.surface,display:'flex',alignItems:'center',gap:8}}>
         <div style={{width:4,height:28,background:T.accent,borderRadius:2}}/>
-        <div style={{fontSize:14,fontWeight:700,fontVariantNumeric:'tabular-nums'}}>{draft.startTime} — {addMin(draft.startTime,draft.duration)}<span style={{marginLeft:8,fontSize:12,fontWeight:500,color:T.ink2}}>{draft.duration}분</span></div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,color:T.ink2,fontWeight:600,marginBottom:2}}>자동 계산된 시간</div>
+          <div style={{fontSize:14,fontWeight:700,fontVariantNumeric:'tabular-nums'}}>
+            {calculatedStart} 시작 → {displayEnd} 종료
+            <span style={{marginLeft:8,fontSize:12,fontWeight:500,color:T.ink2}}>({draft.duration}분)</span>
+          </div>
+        </div>
       </div>
     </SBody>
     <SFoot><PBtn onClick={onNext}>다음</PBtn></SFoot>
@@ -2000,7 +2021,7 @@ function AdminApp({onSignOut}){
     setToast({title:`${block.customer.name} 예약 거절됨`});
   },[reloadSupaBookings]);
 
-  const initDraft=()=>({date:new Date(selectedDate),duration:60,startTime:'13:00',name:'',phone:'',customer:null,segs:[]});
+  const initDraft=()=>({date:new Date(selectedDate),duration:60,startTime:'13:00',endTime:'14:00',name:'',phone:'',customer:null,segs:[]});
   const openNew=()=>{setDraft(initDraft());setEditingId(null);setFlow('s1');};
   const openNewAt=useCallback((time,staffId)=>{
     if(flow)return;
