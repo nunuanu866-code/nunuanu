@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node -e \"require('fs').copyFileSync('dist/public/admin.html','dist/admin.html')\"",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
