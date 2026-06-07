@@ -1934,7 +1934,7 @@ function Toast({msg,onDone}){
 }
 
 // ── Header ─────────────────────────────────────────────────────────
-function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,supaBookings,staff}){
+function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,supaBookings,staff,supaCustomers,setDraft,setEditingId,setFlow,setShowCal:setShowCalProp}){
   const[showCal,setShowCal]=useState(false);
   const mo=selectedDate.getMonth()+1,dd=selectedDate.getDate(),dow=DOW_KO[selectedDate.getDay()];
   return <div style={{position:'relative',padding:`calc(env(safe-area-inset-top,0px) + 10px) 16px 10px`,borderBottom:`1px solid ${T.line}`,background:T.surface,display:'flex',alignItems:'flex-end',justifyContent:'space-between',flexShrink:0,zIndex:20}}>
@@ -2447,7 +2447,7 @@ function AdminApp({onSignOut}){
       onJumpDate={date=>{setSelectedDate(new Date(date));setTab('today');}}
     />}
     {tab==='today'&&<>
-      <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={staff.length} loadingBkg={loadingBkg} supaBookings={supaBookings} staff={staff}/>
+      <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={staff.length} loadingBkg={loadingBkg} supaBookings={supaBookings} staff={staff} supaCustomers={supaCustomers} setDraft={setDraft} setEditingId={setEditingId} setFlow={setFlow} setShowCal={setShowCal}/>
       <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative'}}>
         <Timeline staff={staff} blocks={todayBlocks} highlightId={highlightId}
           onBlockTap={b=>{if(!flow)setSelectedBlock(b);}}
