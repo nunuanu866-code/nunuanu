@@ -36,8 +36,19 @@
   <!-- Google Identity Services (구글 캘린더 OAuth) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body><div id="root"></div>
+<body>
+  <div id="root">
+    <!-- 로딩 인디케이터 -->
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
+      <div style="width:48px;height:48px;border:4px solid #E5E5E2;border-top:4px solid #18181B;border-radius:50%;animation:spin 1s linear infinite;"></div>
+      <div style="font-size:14px;color:#52525B;font-weight:600;">누누아누 관리자 로딩 중...</div>
+    </div>
+  </div>
 <script type="text/babel" data-presets="env,react">
+console.log('🚀 누누아누 관리자 시작...');
+console.log('✅ React 로드됨:', typeof React !== 'undefined');
+console.log('✅ ReactDOM 로드됨:', typeof ReactDOM !== 'undefined');
+
 const {useState,useEffect,useRef,useMemo,useCallback} = React;
 
 // ── 비밀번호 (변경 가능) ─────────────────────────────────────────
@@ -2468,7 +2479,30 @@ function App(){
   return <AdminApp onSignOut={()=>setAuthed(false)}/>;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+// React 18 렌더링 (에러 처리 추가)
+console.log('📦 App 컴포넌트 준비 완료');
+try {
+  console.log('🎨 React 18 방식으로 렌더링 시작...');
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App/>);
+  console.log('✅ 렌더링 완료!');
+} catch(e) {
+  console.error('❌ React 18 렌더링 에러:', e);
+  console.log('🔄 React 17 방식으로 폴백 시도...');
+  try {
+    ReactDOM.render(<App/>, document.getElementById('root'));
+    console.log('✅ React 17 방식 렌더링 완료!');
+  } catch(e2) {
+    console.error('❌ React 17 렌더링도 실패:', e2);
+    document.getElementById('root').innerHTML = `
+      <div style="padding:40px;text-align:center;font-family:sans-serif;">
+        <h2 style="color:#EF4444;margin-bottom:16px;">⚠️ 앱 로딩 실패</h2>
+        <p style="color:#6B7280;margin-bottom:24px;">React 라이브러리를 로드하는 데 문제가 발생했습니다.</p>
+        <p style="font-size:14px;color:#9CA3AF;">브라우저 콘솔(F12)에서 에러를 확인하세요.</p>
+      </div>
+    `;
+  }
+}
 </script>
 </body>
 </html>
