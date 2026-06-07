@@ -455,7 +455,9 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     // 현재 선택된 날짜로 예약 생성
     if(onCreateBooking){
       onCreateBooking(customer,selectedDate);
-      onClose?.();
+    }
+    if(onClose){
+      onClose();
     }
   };
 
@@ -496,6 +498,9 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     setTimeout(()=>setShowAutocomplete(false),200);
   };
 
+  // 자동완성 사용 가능 여부
+  const hasAutocompleteFeature=supaCustomers&&supaCustomers.length>0&&onCreateBooking;
+
   // 캘린더 + 리스트 함께 표시
   return <div style={{background:T.surface,borderRadius:18,padding:14,border:`1px solid ${T.line}`,boxShadow:'0 12px 40px rgba(0,0,0,.18)',width:320,maxHeight:'80vh',display:'flex',flexDirection:'column',gap:12}}>
     {/* 검색창 */}
@@ -507,7 +512,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
           value={searchQuery}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={()=>searchQuery.trim()&&setShowAutocomplete(true)}
+          onFocus={()=>searchQuery.trim()&&hasAutocompleteFeature&&setShowAutocomplete(true)}
           onBlur={handleBlur}
           placeholder="고객명 또는 연락처 검색"
           style={{width:'100%',height:36,borderRadius:10,border:`1.5px solid ${T.line}`,background:T.bg,padding:'0 32px 0 10px',fontSize:13,outline:'none',transition:'border .15s'}}
@@ -515,7 +520,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
         {searchQuery&&<button onClick={clearSearch} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',width:20,height:20,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:10}}>✕</button>}
 
         {/* 자동완성 드롭다운 */}
-        {showAutocomplete&&autocompleteCustomers.length>0&&<div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'#fff',border:`1px solid ${T.line}`,borderRadius:10,boxShadow:'0 4px 12px rgba(0,0,0,.15)',zIndex:100,maxHeight:200,overflowY:'auto'}}>
+        {hasAutocompleteFeature&&showAutocomplete&&autocompleteCustomers.length>0&&<div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'#fff',border:`1px solid ${T.line}`,borderRadius:10,boxShadow:'0 4px 12px rgba(0,0,0,.15)',zIndex:100,maxHeight:200,overflowY:'auto'}}>
           {autocompleteCustomers.map((customer,idx)=><button
             key={customer.id}
             onClick={()=>handleSelectCustomer(customer)}
@@ -1963,6 +1968,7 @@ function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,s
             };
             setDraft(d);
             setEditingId(null);
+            setShowCal(false); // 미니 달력 닫기
             setFlow('s3'); // 시술 유형 선택 단계로 이동
           }}
         />
