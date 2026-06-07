@@ -30,9 +30,9 @@
     .sel{width:100%;height:48px;border-radius:12px;border:1.5px solid #E5E5E2;background:#fff;padding:0 12px;font-size:15px;color:#18181B;outline:none;appearance:none;-webkit-appearance:none}
     label.lbl{display:block;font-size:12px;font-weight:700;color:#52525B;margin-bottom:6px}
   </style>
-  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- Google Identity Services (구글 캘린더 OAuth) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -2479,29 +2479,55 @@ function App(){
   return <AdminApp onSignOut={()=>setAuthed(false)}/>;
 }
 
-// React 18 렌더링 (에러 처리 추가)
+// DOM 및 라이브러리 로딩 대기
 console.log('📦 App 컴포넌트 준비 완료');
-try {
-  console.log('🎨 React 18 방식으로 렌더링 시작...');
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(<App/>);
-  console.log('✅ 렌더링 완료!');
-} catch(e) {
-  console.error('❌ React 18 렌더링 에러:', e);
-  console.log('🔄 React 17 방식으로 폴백 시도...');
-  try {
-    ReactDOM.render(<App/>, document.getElementById('root'));
-    console.log('✅ React 17 방식 렌더링 완료!');
-  } catch(e2) {
-    console.error('❌ React 17 렌더링도 실패:', e2);
+
+function initApp() {
+  console.log('🎨 앱 초기화 시작...');
+
+  // React/ReactDOM 로드 확인
+  if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+    console.error('❌ React 라이브러리가 로드되지 않았습니다');
     document.getElementById('root').innerHTML = `
       <div style="padding:40px;text-align:center;font-family:sans-serif;">
-        <h2 style="color:#EF4444;margin-bottom:16px;">⚠️ 앱 로딩 실패</h2>
-        <p style="color:#6B7280;margin-bottom:24px;">React 라이브러리를 로드하는 데 문제가 발생했습니다.</p>
-        <p style="font-size:14px;color:#9CA3AF;">브라우저 콘솔(F12)에서 에러를 확인하세요.</p>
+        <h2 style="color:#EF4444;margin-bottom:16px;">⚠️ React 로딩 실패</h2>
+        <p style="color:#6B7280;margin-bottom:24px;">인터넷 연결을 확인하고 페이지를 새로고침하세요.</p>
+        <button onclick="location.reload()" style="padding:10px 20px;border-radius:8px;border:none;background:#18181B;color:#fff;cursor:pointer;">새로고침</button>
       </div>
     `;
+    return;
   }
+
+  try {
+    console.log('🎨 React 18 방식으로 렌더링 시작...');
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App/>);
+    console.log('✅ 렌더링 완료!');
+  } catch(e) {
+    console.error('❌ React 18 렌더링 에러:', e);
+    console.log('🔄 React 17 방식으로 폴백 시도...');
+    try {
+      ReactDOM.render(<App/>, document.getElementById('root'));
+      console.log('✅ React 17 방식 렌더링 완료!');
+    } catch(e2) {
+      console.error('❌ React 17 렌더링도 실패:', e2);
+      document.getElementById('root').innerHTML = `
+        <div style="padding:40px;text-align:center;font-family:sans-serif;">
+          <h2 style="color:#EF4444;margin-bottom:16px;">⚠️ 앱 로딩 실패</h2>
+          <p style="color:#6B7280;margin-bottom:24px;">렌더링 에러가 발생했습니다.</p>
+          <p style="font-size:14px;color:#9CA3AF;">브라우저 콘솔(F12)에서 에러를 확인하세요.</p>
+          <button onclick="location.reload()" style="padding:10px 20px;border-radius:8px;border:none;background:#18181B;color:#fff;cursor:pointer;margin-top:16px;">새로고침</button>
+        </div>
+      `;
+    }
+  }
+}
+
+// 초기화 실행 (약간의 지연 추가)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  setTimeout(initApp, 100);
 }
 </script>
 </body>
