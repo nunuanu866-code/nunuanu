@@ -333,7 +333,7 @@ function SFoot({children}){return <div style={{padding:'12px 20px 16px',display:
 function FF({label,children}){return <div style={{marginBottom:14}}><label className="lbl">{label}</label>{children}</div>;}
 
 // ── MiniCalendar ───────────────────────────────────────────────
-function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
+function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,onCreateBooking}){
   const[vm,setVm]=useState(()=>{const d=new Date(value);d.setDate(1);return d;});
   const[selectedDate,setSelectedDate]=useState(()=>{
     // 초기값: 현재 선택된 날짜
@@ -342,6 +342,9 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
   });
   const[searchQuery,setSearchQuery]=useState('');
   const[searchMode,setSearchMode]=useState(false);
+  const[showAutocomplete,setShowAutocomplete]=useState(false);
+  const[focusedIndex,setFocusedIndex]=useState(-1);
+  const inputRef=useRef(null);
 
   const yr=vm.getFullYear(),mo=vm.getMonth();
   const firstDow=new Date(yr,mo,1).getDay();
@@ -350,7 +353,20 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
   for(let i=0;i<firstDow;i++)cells.push(null);
   for(let d=1;d<=daysInMo;d++)cells.push(new Date(yr,mo,d));
 
-  // 고객 검색 결과
+  // 자동완성용 고객 목록 필터링
+  const autocompleteCustomers=useMemo(()=>{
+    if(!searchQuery.trim())return[];
+    const q=searchQuery.toLowerCase().replace(/-/g,'');
+    return (supaCustomers||[])
+      .filter(c=>{
+        const name=c.name?.toLowerCase()||'';
+        const phone=c.phone?.replace(/-/g,'')||'';
+        return name.includes(searchQuery.toLowerCase())||phone.includes(q);
+      })
+      .slice(0,5); // 최대 5개만 표시
+  },[searchQuery,supaCustomers]);
+
+  // 고객 검색 결과 (예약 기록)
   const searchResults=useMemo(()=>{
     if(!searchQuery.trim())return[];
     const q=searchQuery.toLowerCase().replace(/-/g,'');
@@ -426,6 +442,58 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
   const clearSearch=()=>{
     setSearchQuery('');
     setSearchMode(false);
+    setShowAutocomplete(false);
+    setFocusedIndex(-1);
+  };
+
+  // 고객 선택 시 예약 생성
+  const handleSelectCustomer=(customer)=>{
+    setSearchQuery('');
+    setShowAutocomplete(false);
+    setSearchMode(false);
+    setFocusedIndex(-1);
+    // 현재 선택된 날짜로 예약 생성
+    if(onCreateBooking){
+      onCreateBooking(customer,selectedDate);
+      onClose?.();
+    }
+  };
+
+  // 키보드 네비게이션
+  const handleKeyDown=(e)=>{
+    if(!showAutocomplete||autocompleteCustomers.length===0)return;
+
+    if(e.key==='ArrowDown'){
+      e.preventDefault();
+      setFocusedIndex(prev=>prev<autocompleteCustomers.length-1?prev+1:prev);
+    }else if(e.key==='ArrowUp'){
+      e.preventDefault();
+      setFocusedIndex(prev=>prev>0?prev-1:0);
+    }else if(e.key==='Enter'){
+      e.preventDefault();
+      if(focusedIndex>=0&&focusedIndex<autocompleteCustomers.length){
+        handleSelectCustomer(autocompleteCustomers[focusedIndex]);
+      }else{
+        handleSearch();
+      }
+    }else if(e.key==='Escape'){
+      setShowAutocomplete(false);
+      setFocusedIndex(-1);
+    }
+  };
+
+  // 입력값 변경 시
+  const handleInputChange=(e)=>{
+    const val=e.target.value;
+    setSearchQuery(val);
+    setShowAutocomplete(val.trim().length>0);
+    setFocusedIndex(-1);
+  };
+
+  // 포커스 아웃 처리
+  const handleBlur=()=>{
+    // 약간의 지연을 주어 클릭 이벤트가 먼저 처리되도록 함
+    setTimeout(()=>setShowAutocomplete(false),200);
   };
 
   // 캘린더 + 리스트 함께 표시
@@ -434,16 +502,33 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff}){
     <div style={{display:'flex',gap:6}}>
       <div style={{flex:1,position:'relative'}}>
         <input
+          ref={inputRef}
           type="text"
           value={searchQuery}
-          onChange={e=>setSearchQuery(e.target.value)}
-          onKeyDown={e=>e.key==='Enter'&&handleSearch()}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={()=>searchQuery.trim()&&setShowAutocomplete(true)}
+          onBlur={handleBlur}
           placeholder="고객명 또는 연락처 검색"
           style={{width:'100%',height:36,borderRadius:10,border:`1.5px solid ${T.line}`,background:T.bg,padding:'0 32px 0 10px',fontSize:13,outline:'none',transition:'border .15s'}}
-          onFocus={e=>e.target.style.borderColor=T.ink}
-          onBlur={e=>e.target.style.borderColor=T.line}
         />
-        {searchQuery&&<button onClick={clearSearch} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',width:20,height:20,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>✕</button>}
+        {searchQuery&&<button onClick={clearSearch} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',width:20,height:20,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:10}}>✕</button>}
+
+        {/* 자동완성 드롭다운 */}
+        {showAutocomplete&&autocompleteCustomers.length>0&&<div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'#fff',border:`1px solid ${T.line}`,borderRadius:10,boxShadow:'0 4px 12px rgba(0,0,0,.15)',zIndex:100,maxHeight:200,overflowY:'auto'}}>
+          {autocompleteCustomers.map((customer,idx)=><button
+            key={customer.id}
+            onClick={()=>handleSelectCustomer(customer)}
+            onMouseEnter={()=>setFocusedIndex(idx)}
+            style={{width:'100%',padding:'10px 12px',border:'none',background:focusedIndex===idx?'#F3F4F6':'transparent',textAlign:'left',cursor:'pointer',borderBottom:idx<autocompleteCustomers.length-1?`1px solid ${T.line2}`:'none',display:'flex',flexDirection:'column',gap:2,transition:'background .15s'}}>
+            <div style={{fontSize:13,fontWeight:700,color:T.ink}}>{customer.name}</div>
+            <div style={{fontSize:11,color:T.ink2}}>{customer.phone}</div>
+            {customer.memo&&<div style={{fontSize:10,color:T.ink3,marginTop:2}}>📝 {customer.memo}</div>}
+          </button>)}
+          <div style={{padding:'6px 12px',background:'#F9FAFB',borderTop:`1px solid ${T.line2}`,fontSize:10,color:T.ink3,textAlign:'center'}}>
+            ↑↓ 이동 · Enter 선택 · ESC 닫기
+          </div>
+        </div>}
       </div>
       <button onClick={handleSearch} disabled={!searchQuery.trim()} style={{width:36,height:36,borderRadius:10,border:'none',background:searchQuery.trim()?T.ink:T.line,color:searchQuery.trim()?'#fff':T.ink3,fontSize:16,cursor:searchQuery.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center'}}>🔍</button>
     </div>
@@ -1851,7 +1936,36 @@ function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,s
     {showCal&&<>
       <div onClick={()=>setShowCal(false)} style={{position:'fixed',inset:0,zIndex:30}}/>
       <div style={{position:'absolute',left:12,top:'calc(100% + 6px)',zIndex:31}}>
-        <MiniCalendar value={selectedDate} onChange={d=>{setSelectedDate(d);setShowCal(false);}} supaBookings={supaBookings} staff={staff}/>
+        <MiniCalendar
+          value={selectedDate}
+          onChange={d=>{setSelectedDate(d);setShowCal(false);}}
+          onClose={()=>setShowCal(false)}
+          supaBookings={supaBookings}
+          staff={staff}
+          supaCustomers={supaCustomers}
+          onCreateBooking={(customer,date)=>{
+            // 선택된 고객으로 예약 생성
+            const d={
+              date:new Date(date),
+              duration:60,
+              startTime:'13:00',
+              endTime:'14:00',
+              customer:{
+                id:customer.id,
+                name:customer.name,
+                phone:customer.phone,
+                pin:customer.pin,
+                memo:customer.memo||'',
+                visits:0,
+                color:'sky'
+              },
+              segs:[]
+            };
+            setDraft(d);
+            setEditingId(null);
+            setFlow('s3'); // 시술 유형 선택 단계로 이동
+          }}
+        />
       </div>
     </>}
   </div>;
