@@ -407,7 +407,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     return map;
   },[supaBookings,searchMode,searchQuery,searchResults]);
 
-  const navBtn=(label,fn)=><button onClick={fn} style={{width:32,height:32,border:'none',background:'transparent',fontSize:18,color:T.ink2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8}}>{label}</button>;
+  const navBtn=(label,fn)=><button type="button" onClick={fn} style={{width:32,height:32,border:'none',background:'transparent',fontSize:18,color:T.ink2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8}}>{label}</button>;
 
   // 날짜 클릭 핸들러
   const handleDateClick=(date)=>{
@@ -528,12 +528,13 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
           placeholder="고객명 또는 연락처 검색"
           style={{width:'100%',height:36,borderRadius:10,border:`1.5px solid ${T.line}`,background:T.bg,padding:'0 32px 0 10px',fontSize:13,outline:'none',transition:'border .15s'}}
         />
-        {searchQuery&&<button onClick={clearSearch} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',width:20,height:20,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:10}}>✕</button>}
+        {searchQuery&&<button type="button" onClick={clearSearch} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',width:20,height:20,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:10}}>✕</button>}
 
         {/* 자동완성 드롭다운 */}
         {hasAutocompleteFeature&&showAutocomplete&&autocompleteCustomers.length>0&&<div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'#fff',border:`1px solid ${T.line}`,borderRadius:10,boxShadow:'0 4px 12px rgba(0,0,0,.15)',zIndex:100,maxHeight:200,overflowY:'auto'}}>
           {autocompleteCustomers.map((customer,idx)=><button
             key={customer.id}
+            type="button"
             onClick={()=>handleSelectCustomer(customer)}
             onMouseEnter={()=>setFocusedIndex(idx)}
             style={{width:'100%',padding:'10px 12px',border:'none',background:focusedIndex===idx?'#F3F4F6':'transparent',textAlign:'left',cursor:'pointer',borderBottom:idx<autocompleteCustomers.length-1?`1px solid ${T.line2}`:'none',display:'flex',flexDirection:'column',gap:2,transition:'background .15s'}}>
@@ -546,7 +547,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
           </div>
         </div>}
       </div>
-      <button onClick={handleSearch} disabled={!searchQuery.trim()} style={{width:36,height:36,borderRadius:10,border:'none',background:searchQuery.trim()?T.ink:T.line,color:searchQuery.trim()?'#fff':T.ink3,fontSize:16,cursor:searchQuery.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center'}}>🔍</button>
+      <button type="button" onClick={handleSearch} disabled={!searchQuery.trim()} style={{width:36,height:36,borderRadius:10,border:'none',background:searchQuery.trim()?T.ink:T.line,color:searchQuery.trim()?'#fff':T.ink3,fontSize:16,cursor:searchQuery.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center'}}>🔍</button>
     </div>
 
     {/* 검색 결과 안내 */}
@@ -572,7 +573,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
           const bookingCount=bookingsByDate[dateStr]||0;
           const dots=Math.min(5,bookingCount);
           const hasSearchResult=searchMode&&searchDates.includes(dateStr);
-          return <button key={i} onClick={()=>handleDateClick(date)} style={{width:'100%',aspectRatio:'1',borderRadius:8,border:tod&&!sel?`2px solid ${T.accent}`:hasSearchResult?`2px solid #F59E0B`:'none',background:sel?T.ink:hasSearchResult?'#FEF3C7':'transparent',color:sel?'#fff':tod?T.accent:hasSearchResult?'#92400E':dow===0?'#EF4444':dow===6?'#3B82F6':T.ink,fontSize:13,fontWeight:sel||tod||hasSearchResult?800:500,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
+          return <button key={i} type="button" onClick={()=>handleDateClick(date)} style={{width:'100%',aspectRatio:'1',borderRadius:8,border:tod&&!sel?`2px solid ${T.accent}`:hasSearchResult?`2px solid #F59E0B`:'none',background:sel?T.ink:hasSearchResult?'#FEF3C7':'transparent',color:sel?'#fff':tod?T.accent:hasSearchResult?'#92400E':dow===0?'#EF4444':dow===6?'#3B82F6':T.ink,fontSize:13,fontWeight:sel||tod||hasSearchResult?800:500,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
             <span>{date.getDate()}</span>
             {bookingCount>0&&<div style={{display:'flex',gap:2,marginTop:2}}>
               {[...Array(dots)].map((_,idx)=><div key={idx} style={{width:3,height:3,borderRadius:'50%',background:sel?'#fff':hasSearchResult?'#F59E0B':'#EF4444'}}/>)}
