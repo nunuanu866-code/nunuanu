@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>디버그 테스트</title>
+  <style>
+    body{font-family:sans-serif;padding:20px;background:#f5f5f5;}
+    .box{background:white;border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+    .success{color:#22c55e;font-weight:bold;}
+    .error{color:#ef4444;font-weight:bold;}
+    button{padding:10px 20px;border-radius:6px;border:none;background:#18181B;color:white;cursor:pointer;margin:5px;}
+    button:hover{background:#3f3f46;}
+  </style>
+</head>
+<body>
+  <h1>🔍 누누아누 앱 디버그 페이지</h1>
+
+  <div class="box">
+    <h2>1단계: 기본 환경 확인</h2>
+    <p id="step1">확인 중...</p>
+  </div>
+
+  <div class="box">
+    <h2>2단계: React 라이브러리 로드</h2>
+    <p id="step2">확인 중...</p>
+  </div>
+
+  <div class="box">
+    <h2>3단계: Babel 로드</h2>
+    <p id="step3">확인 중...</p>
+  </div>
+
+  <div class="box">
+    <h2>4단계: JSX 변환 테스트</h2>
+    <p id="step4">확인 중...</p>
+    <div id="react-test"></div>
+  </div>
+
+  <div class="box">
+    <h2>5단계: admin.html 열기</h2>
+    <button onclick="window.location.href='admin.html'">admin.html 열기</button>
+    <button onclick="window.open('admin.html', '_blank')">새 탭에서 열기</button>
+  </div>
+
+  <div class="box">
+    <h2>📋 콘솔 로그</h2>
+    <div id="console-log" style="background:#1e1e1e;color:#fff;padding:15px;border-radius:6px;font-family:monospace;font-size:12px;max-height:300px;overflow-y:auto;"></div>
+  </div>
+
+  <script>
+    const log = (msg, isError = false) => {
+      const consoleDiv = document.getElementById('console-log');
+      const time = new Date().toLocaleTimeString();
+      const color = isError ? '#ef4444' : '#22c55e';
+      consoleDiv.innerHTML += `<div style="color:${color};margin-bottom:5px;">[${time}] ${msg}</div>`;
+      console.log(msg);
+    };
+
+    // 1단계
+    setTimeout(() => {
+      document.getElementById('step1').innerHTML =
+        `<span class="success">✅ 브라우저: ${navigator.userAgent.split(' ').pop()}</span><br>` +
+        `<span class="success">✅ 현재 URL: ${window.location.href}</span>`;
+      log('✅ 기본 환경 확인 완료');
+    }, 100);
+
+    // 2단계: React 로드
+    const script1 = document.createElement('script');
+    script1.src = 'https://unpkg.com/react@17/umd/react.production.min.js';
+    script1.onload = () => {
+      document.getElementById('step2').innerHTML =
+        `<span class="success">✅ React 로드 성공</span><br>` +
+        `<span class="success">React 버전: ${React.version}</span>`;
+      log('✅ React 로드 성공: v' + React.version);
+
+      // ReactDOM 로드
+      const script2 = document.createElement('script');
+      script2.src = 'https://unpkg.com/react-dom@17/umd/react-dom.production.min.js';
+      script2.onload = () => {
+        document.getElementById('step2').innerHTML +=
+          `<br><span class="success">✅ ReactDOM 로드 성공</span>`;
+        log('✅ ReactDOM 로드 성공');
+
+        // 3단계: Babel 로드
+        const script3 = document.createElement('script');
+        script3.src = 'https://unpkg.com/@babel/standalone@7.23.5/babel.min.js';
+        script3.onload = () => {
+          document.getElementById('step3').innerHTML =
+            `<span class="success">✅ Babel 로드 성공</span><br>` +
+            `<span class="success">Babel 버전: ${Babel.version}</span>`;
+          log('✅ Babel 로드 성공: v' + Babel.version);
+
+          // 4단계: JSX 테스트
+          testJSX();
+        };
+        script3.onerror = () => {
+          document.getElementById('step3').innerHTML =
+            `<span class="error">❌ Babel 로드 실패</span><br>` +
+            `<span>CDN 접속 불가능 - 인터넷 연결 확인</span>`;
+          log('❌ Babel 로드 실패', true);
+        };
+        document.head.appendChild(script3);
+      };
+      script2.onerror = () => {
+        document.getElementById('step2').innerHTML +=
+          `<br><span class="error">❌ ReactDOM 로드 실패</span>`;
+        log('❌ ReactDOM 로드 실패', true);
+      };
+      document.head.appendChild(script2);
+    };
+    script1.onerror = () => {
+      document.getElementById('step2').innerHTML =
+        `<span class="error">❌ React 로드 실패</span><br>` +
+        `<span>CDN 접속 불가능 - 인터넷 연결 확인</span>`;
+      log('❌ React 로드 실패', true);
+    };
+    document.head.appendChild(script1);
+
+    function testJSX() {
+      try {
+        log('🧪 JSX 변환 테스트 시작...');
+
+        const jsxCode = `
+          const {useState} = React;
+
+          function TestApp() {
+            const [count, setCount] = useState(0);
+
+            return React.createElement('div', {style: {padding: '20px', background: '#f0fdf4', borderRadius: '8px'}},
+              React.createElement('h3', {style: {color: '#22c55e', marginBottom: '10px'}}, '✅ React가 정상 작동합니다!'),
+              React.createElement('p', null, '카운트: ', count),
+              React.createElement('button', {
+                onClick: () => setCount(count + 1),
+                style: {padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}
+              }, '클릭 +1')
+            );
+          }
+
+          ReactDOM.render(React.createElement(TestApp), document.getElementById('react-test'));
+        `;
+
+        eval(jsxCode);
+
+        document.getElementById('step4').innerHTML =
+          `<span class="success">✅ JSX 변환 및 렌더링 성공</span><br>` +
+          `<span>아래 버튼을 클릭해서 React가 작동하는지 확인하세요:</span>`;
+        log('✅ JSX 변환 및 렌더링 성공');
+
+      } catch(e) {
+        document.getElementById('step4').innerHTML =
+          `<span class="error">❌ JSX 변환 실패</span><br>` +
+          `<span>에러: ${e.message}</span>`;
+        log('❌ JSX 변환 실패: ' + e.message, true);
+      }
+    }
+  </script>
+</body>
+</html>
