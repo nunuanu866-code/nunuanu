@@ -30,9 +30,9 @@
     .sel{width:100%;height:48px;border-radius:12px;border:1.5px solid #E5E5E2;background:#fff;padding:0 12px;font-size:15px;color:#18181B;outline:none;appearance:none;-webkit-appearance:none}
     label.lbl{display:block;font-size:12px;font-weight:700;color:#52525B;margin-bottom:6px}
   </style>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
   <!-- Google Identity Services (구글 캘린더 OAuth) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -2499,27 +2499,19 @@ function initApp() {
   }
 
   try {
-    console.log('🎨 React 18 방식으로 렌더링 시작...');
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App/>);
+    console.log('🎨 렌더링 시작...');
+    ReactDOM.render(<App/>, document.getElementById('root'));
     console.log('✅ 렌더링 완료!');
   } catch(e) {
-    console.error('❌ React 18 렌더링 에러:', e);
-    console.log('🔄 React 17 방식으로 폴백 시도...');
-    try {
-      ReactDOM.render(<App/>, document.getElementById('root'));
-      console.log('✅ React 17 방식 렌더링 완료!');
-    } catch(e2) {
-      console.error('❌ React 17 렌더링도 실패:', e2);
-      document.getElementById('root').innerHTML = `
-        <div style="padding:40px;text-align:center;font-family:sans-serif;">
-          <h2 style="color:#EF4444;margin-bottom:16px;">⚠️ 앱 로딩 실패</h2>
-          <p style="color:#6B7280;margin-bottom:24px;">렌더링 에러가 발생했습니다.</p>
-          <p style="font-size:14px;color:#9CA3AF;">브라우저 콘솔(F12)에서 에러를 확인하세요.</p>
-          <button onclick="location.reload()" style="padding:10px 20px;border-radius:8px;border:none;background:#18181B;color:#fff;cursor:pointer;margin-top:16px;">새로고침</button>
-        </div>
-      `;
-    }
+    console.error('❌ 렌더링 에러:', e);
+    document.getElementById('root').innerHTML = `
+      <div style="padding:40px;text-align:center;font-family:sans-serif;">
+        <h2 style="color:#EF4444;margin-bottom:16px;">⚠️ 앱 로딩 실패</h2>
+        <p style="color:#6B7280;margin-bottom:24px;">렌더링 에러: ${e.message}</p>
+        <p style="font-size:14px;color:#9CA3AF;">브라우저 콘솔(F12)에서 상세 에러를 확인하세요.</p>
+        <button onclick="location.reload()" style="padding:10px 20px;border-radius:8px;border:none;background:#18181B;color:#fff;cursor:pointer;margin-top:16px;">새로고침</button>
+      </div>
+    `;
   }
 }
 
