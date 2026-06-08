@@ -336,6 +336,8 @@
       const [step, setStep] = useState(1); // 1: 서비스선택, 2: 날짜/시간, 3: 고객정보, 4: 완료
       const [selectedService, setSelectedService] = useState('');
       const [selectedStaff, setSelectedStaff] = useState(null);
+      const [selectedHairStaff, setSelectedHairStaff] = useState(null); // 헤어 스텝
+      const [selectedMakeupStaff, setSelectedMakeupStaff] = useState(null); // 메이크업 스텝
       const [selectedDate, setSelectedDate] = useState('');
       const [selectedTime, setSelectedTime] = useState('');
       const [customerName, setCustomerName] = useState('');
@@ -381,9 +383,9 @@
 
       // 서비스 옵션
       const services = [
-        { id: 'hair', name: '헤어 스타일링', duration: 40, icon: '💇‍♀️' },
-        { id: 'makeup', name: '메이크업', duration: 60, icon: '💄' },
-        { id: 'both', name: '헤어 + 메이크업', duration: 100, icon: '✨' }
+        { id: 'hair', name: '헤어 스타일링', duration: 40, icon: '💇‍♀️', hairDur: 40, makeupDur: 0 },
+        { id: 'makeup', name: '메이크업', duration: 60, icon: '💄', hairDur: 0, makeupDur: 60 },
+        { id: 'both', name: '헤어 + 메이크업', duration: 100, icon: '✨', hairDur: 40, makeupDur: 60 }
       ];
 
       // 가능한 날짜 (오늘부터 30일)
@@ -402,6 +404,9 @@
       const availableTimes = useMemo(() => {
         if (!selectedDate) return [];
 
+        const service = services.find(s => s.id === selectedService);
+        if (!service) return [];
+
         const times = [];
         const start = 4 * 60; // 04:00 (분)
         const end = 20 * 60; // 20:00 (분)
@@ -411,24 +416,56 @@
           const m = min % 60;
           const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
-          // 예약된 시간 체크
-          const isBooked = bookings.some(booking => {
-            if (!selectedStaff) return false;
-            if (booking.staff_id !== selectedStaff.id) return false;
-            if (booking.booking_date !== selectedDate) return false;
+          let isBooked = false;
 
-            const bookingStart = new Date(`${booking.booking_date}T${booking.start_time}`);
-            const bookingEnd = new Date(`${booking.booking_date}T${booking.end_time}`);
-            const checkTime = new Date(`${selectedDate}T${timeStr}`);
+          // 헤어+메이크업인 경우 두 스텝 모두 확인
+          if (selectedService === 'both' && selectedHairStaff && selectedMakeupStaff) {
+            const checkHairConflict = bookings.some(booking => {
+              if (booking.staff_id !== selectedHairStaff.id) return false;
+              if (booking.booking_date !== selectedDate) return false;
+              const bookingStart = new Date(`${booking.booking_date}T${booking.start_time}`);
+              const bookingEnd = new Date(`${booking.booking_date}T${booking.end_time}`);
+              const checkTime = new Date(`${selectedDate}T${timeStr}`);
+              const checkEnd = new Date(checkTime.getTime() + service.hairDur * 60000);
+              return (checkTime < bookingEnd && checkEnd > bookingStart);
+            });
 
-            return checkTime >= bookingStart && checkTime < bookingEnd;
-          });
+            const hairEndMin = min + service.hairDur;
+            const makeupEndMin = hairEndMin + service.makeupDur;
+
+            const checkMakeupConflict = bookings.some(booking => {
+              if (booking.staff_id !== selectedMakeupStaff.id) return false;
+              if (booking.booking_date !== selectedDate) return false;
+              const bookingStart = new Date(`${booking.booking_date}T${booking.start_time}`);
+              const bookingEnd = new Date(`${booking.booking_date}T${booking.end_time}`);
+              const makeupStartH = Math.floor(hairEndMin / 60);
+              const makeupStartM = hairEndMin % 60;
+              const makeupStartTime = new Date(`${selectedDate}T${String(makeupStartH).padStart(2, '0')}:${String(makeupStartM).padStart(2, '0')}`);
+              const makeupEndH = Math.floor(makeupEndMin / 60);
+              const makeupEndM = makeupEndMin % 60;
+              const makeupEndTime = new Date(`${selectedDate}T${String(makeupEndH).padStart(2, '0')}:${String(makeupEndM).padStart(2, '0')}`);
+              return (makeupStartTime < bookingEnd && makeupEndTime > bookingStart);
+            });
+
+            isBooked = checkHairConflict || checkMakeupConflict;
+          } else if (selectedStaff) {
+            // 단일 서비스인 경우
+            isBooked = bookings.some(booking => {
+              if (booking.staff_id !== selectedStaff.id) return false;
+              if (booking.booking_date !== selectedDate) return false;
+              const bookingStart = new Date(`${booking.booking_date}T${booking.start_time}`);
+              const bookingEnd = new Date(`${booking.booking_date}T${booking.end_time}`);
+              const checkTime = new Date(`${selectedDate}T${timeStr}`);
+              const checkEnd = new Date(checkTime.getTime() + service.duration * 60000);
+              return (checkTime < bookingEnd && checkEnd > bookingStart);
+            });
+          }
 
           times.push({ time: timeStr, disabled: isBooked });
         }
 
         return times;
-      }, [selectedDate, selectedStaff, bookings]);
+      }, [selectedDate, selectedService, selectedStaff, selectedHairStaff, selectedMakeupStaff, bookings, services]);
 
       // 스텝 1: 서비스 선택
       const renderServiceSelection = () => (
@@ -453,37 +490,108 @@
             </div>
           ))}
 
-          <div style={{ marginTop: '24px' }}>
-            <div className="section-title">
-              <span>👩‍💼</span>
-              <span>담당 디자이너를 선택하세요</span>
-            </div>
-
-            <div className="staff-grid">
-              {staffList.map(staff => (
-                <div
-                  key={staff.id}
-                  className={`staff-card ${selectedStaff?.id === staff.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedStaff(staff)}
-                >
-                  <div className="staff-icon">
-                    {staff.part === 'hair' ? '💇‍♀️' : '💄'}
-                  </div>
-                  <div className="staff-name">{staff.name}</div>
-                  <div className="staff-role">
-                    {staff.role === 'admin' ? '원장' : '디자이너'}
-                  </div>
+          {/* 헤어 + 메이크업 선택 시 */}
+          {selectedService === 'both' && (
+            <>
+              <div style={{ marginTop: '24px' }}>
+                <div className="section-title">
+                  <span>💇‍♀️</span>
+                  <span>헤어 담당 디자이너를 선택하세요</span>
                 </div>
-              ))}
+
+                <div className="staff-grid">
+                  {staffList.filter(s => s.role === 'hair').map(staff => (
+                    <div
+                      key={staff.id}
+                      className={`staff-card ${selectedHairStaff?.id === staff.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedHairStaff(staff)}
+                    >
+                      <div className="staff-icon">💇‍♀️</div>
+                      <div className="staff-name">{staff.name}</div>
+                      <div className="staff-role">
+                        {staff.is_admin ? '원장' : '디자이너'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: '24px' }}>
+                <div className="section-title">
+                  <span>💄</span>
+                  <span>메이크업 담당 디자이너를 선택하세요</span>
+                </div>
+
+                <div className="staff-grid">
+                  {staffList.filter(s => s.role === 'makeup').map(staff => (
+                    <div
+                      key={staff.id}
+                      className={`staff-card ${selectedMakeupStaff?.id === staff.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedMakeupStaff(staff)}
+                    >
+                      <div className="staff-icon">💄</div>
+                      <div className="staff-name">{staff.name}</div>
+                      <div className="staff-role">
+                        {staff.is_admin ? '원장' : '디자이너'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* 헤어 또는 메이크업만 선택 시 */}
+          {selectedService && selectedService !== 'both' && (
+            <div style={{ marginTop: '24px' }}>
+              <div className="section-title">
+                <span>👩‍💼</span>
+                <span>담당 디자이너를 선택하세요</span>
+              </div>
+
+              <div className="staff-grid">
+                {staffList
+                  .filter(staff => {
+                    if (selectedService === 'hair') return staff.role === 'hair';
+                    if (selectedService === 'makeup') return staff.role === 'makeup';
+                    return true;
+                  })
+                  .map(staff => (
+                    <div
+                      key={staff.id}
+                      className={`staff-card ${selectedStaff?.id === staff.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedStaff(staff)}
+                    >
+                      <div className="staff-icon">
+                        {staff.role === 'hair' ? '💇‍♀️' : '💄'}
+                      </div>
+                      <div className="staff-name">{staff.name}</div>
+                      <div className="staff-role">
+                        {staff.is_admin ? '원장' : '디자이너'}
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <button
             className="btn btn-primary"
             onClick={() => {
-              if (!selectedService || !selectedStaff) {
-                setError('서비스와 디자이너를 선택해주세요');
+              if (!selectedService) {
+                setError('서비스를 선택해주세요');
                 return;
+              }
+              if (selectedService === 'both') {
+                if (!selectedHairStaff || !selectedMakeupStaff) {
+                  setError('헤어와 메이크업 담당자를 모두 선택해주세요');
+                  return;
+                }
+              } else {
+                if (!selectedStaff) {
+                  setError('담당 디자이너를 선택해주세요');
+                  return;
+                }
               }
               setError('');
               setStep(2);
@@ -584,10 +692,23 @@
                 <span className="summary-label">서비스</span>
                 <span className="summary-value">{service?.name}</span>
               </div>
-              <div className="summary-item">
-                <span className="summary-label">담당</span>
-                <span className="summary-value">{selectedStaff?.name}</span>
-              </div>
+              {selectedService === 'both' ? (
+                <>
+                  <div className="summary-item">
+                    <span className="summary-label">헤어 담당</span>
+                    <span className="summary-value">{selectedHairStaff?.name}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">메이크업 담당</span>
+                    <span className="summary-value">{selectedMakeupStaff?.name}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="summary-item">
+                  <span className="summary-label">담당</span>
+                  <span className="summary-value">{selectedStaff?.name}</span>
+                </div>
+              )}
               <div className="summary-item">
                 <span className="summary-label">날짜</span>
                 <span className="summary-value">{selectedDate}</span>
@@ -686,19 +807,33 @@
             customerId = newCustomer.id;
           }
 
+          // 예약 생성 데이터 준비
+          const bookingData = {
+            customer_id: customerId,
+            service_type: selectedService,
+            booking_date: selectedDate,
+            start_time: formatTime(startTime),
+            end_time: formatTime(endTime),
+            status: 'pending',
+            customer_memo: memo || null
+          };
+
+          // 헤어+메이크업인 경우 staff_sequence 추가
+          if (selectedService === 'both' && selectedHairStaff && selectedMakeupStaff) {
+            bookingData.staff_sequence = JSON.stringify([
+              { staffId: selectedHairStaff.id, dur: service.hairDur },
+              { staffId: selectedMakeupStaff.id, dur: service.makeupDur }
+            ]);
+            bookingData.requested_staff_id = selectedHairStaff.id; // 첫 번째 스텝을 대표로
+          } else {
+            // 단일 서비스인 경우
+            bookingData.requested_staff_id = selectedStaff.id;
+          }
+
           // 예약 생성
           const { error: bookingError } = await supabaseClient
             .from('bookings')
-            .insert([{
-              customer_id: customerId,
-              staff_id: selectedStaff.id,
-              service_type: selectedService,
-              booking_date: selectedDate,
-              start_time: formatTime(startTime),
-              end_time: formatTime(endTime),
-              status: 'pending',
-              memo: memo || null
-            }]);
+            .insert([bookingData]);
 
           if (bookingError) throw bookingError;
 
@@ -751,6 +886,8 @@
               setStep(1);
               setSelectedService('');
               setSelectedStaff(null);
+              setSelectedHairStaff(null);
+              setSelectedMakeupStaff(null);
               setSelectedDate('');
               setSelectedTime('');
               setCustomerName('');

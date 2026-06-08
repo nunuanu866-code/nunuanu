@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   service_detail      TEXT,
   requested_staff_id  UUID REFERENCES staff(id),
   assigned_staff      JSONB,
+  staff_sequence      JSONB, -- 여러 스텝 순서 정보 [{"staffId": "uuid", "dur": 40}, ...]
   customer_memo       TEXT,
   admin_memo          TEXT,
   status              TEXT DEFAULT 'pending' CHECK (status IN ('pending','confirmed','rejected','cancelled')),
