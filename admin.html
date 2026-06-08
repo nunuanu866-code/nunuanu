@@ -218,7 +218,12 @@ function bookingToBlock(b, staffList){
   let segs=[];
   try{
     if(b.staff_sequence){
-      segs=JSON.parse(b.staff_sequence);
+      // Supabase JSONB는 이미 파싱되어 있음
+      if(typeof b.staff_sequence==='string'){
+        segs=JSON.parse(b.staff_sequence);
+      }else if(Array.isArray(b.staff_sequence)){
+        segs=b.staff_sequence;
+      }
     }
   }catch{}
 
@@ -1457,9 +1462,11 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onJumpDate}){
     // 기존 staff_sequence 유지 (고객이 예약 시 설정한 경우)
     let staffSequence=null;
     if(editSegs.length>0){
-      staffSequence=JSON.stringify(editSegs);
+      // 편집된 경우: 배열을 그대로 전달 (Supabase가 JSONB로 처리)
+      staffSequence=editSegs;
     }else if(selected.staff_sequence){
       // 편집하지 않았으면 기존 staff_sequence 유지
+      // Supabase에서 가져온 값은 이미 파싱된 객체/배열이므로 그대로 전달
       staffSequence=selected.staff_sequence;
     }
 
