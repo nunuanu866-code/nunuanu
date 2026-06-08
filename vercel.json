@@ -2,14 +2,26 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.html",
+      "src": "index-customer.html",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
+      "src": "/",
+      "dest": "/index-customer.html"
+    },
+    {
+      "src": "/customer.html",
+      "dest": "/index-customer.html"
+    },
+    {
+      "src": "/admin.html",
+      "dest": "/admin.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/index-customer.html"
     }
   ],
   "headers": [
