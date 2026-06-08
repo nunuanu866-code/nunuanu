@@ -79,20 +79,38 @@ async function sbGet(path){
 async function sbPatch(table,id,body){
   try{
     console.log('[sbPatch] 요청:',{table,id,body});
+    console.log('[sbPatch] body 타입 체크:', Object.keys(body).map(k=>({key:k,value:body[k],type:typeof body[k],isArray:Array.isArray(body[k])})));
+
+    const stringifiedBody=JSON.stringify(body);
+    console.log('[sbPatch] JSON.stringify 결과:', stringifiedBody);
+
     const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{
       method:'PATCH',
       headers:{...SB_HDR,'Prefer':'return=minimal'},
-      body:JSON.stringify(body)
+      body:stringifiedBody
     });
+
+    console.log('[sbPatch] Response status:', r.status, r.statusText);
+
     if(!r.ok){
       const err=await r.text().catch(()=>'');
-      console.error('[sbPatch] 실패',{status:r.status,statusText:r.statusText,error:err,table,id,body});
+      console.error('[sbPatch] 실패 - 상세 정보:',{
+        status:r.status,
+        statusText:r.statusText,
+        error:err,
+        table,
+        id,
+        body,
+        stringifiedBody
+      });
+      alert(`예약 확정 실패\n상태: ${r.status}\n에러: ${err}\n\n개발자 도구 콘솔을 확인하세요.`);
       return false;
     }
     console.log('[sbPatch] 성공:',{table,id});
     return true;
   }catch(e){
-    console.error('[sbPatch] 오류',{message:e.message,table,id,body});
+    console.error('[sbPatch] 예외 발생:',{message:e.message,stack:e.stack,table,id,body});
+    alert(`예약 확정 중 오류 발생:\n${e.message}\n\n개발자 도구 콘솔을 확인하세요.`);
     return false;
   }
 }
@@ -1439,9 +1457,38 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onJumpDate}){
     setEditService(b.service_type||'');
     setEditDetail(b.service_detail||'');
     setEditStaffId(b.requested_staff_id||'');
-    // 초기 세그먼트 설정: 요청된 스텝이 있으면 단일 세그먼트, 없으면 빈 배열
+
+    // 초기 세그먼트 설정
     const totalDur=calculateDuration(b.start_time?.slice(0,5)||'09:00',b.end_time?.slice(0,5)||'10:00');
-    setEditSegs(b.requested_staff_id?[{staffId:b.requested_staff_id,label:'시술',dur:totalDur}]:[]);
+    let initialSegs=[];
+
+    // staff_sequence가 있으면 그것을 사용 (헤어+메이크업 예약)
+    if(b.staff_sequence){
+      try{
+        let seqs=b.staff_sequence;
+        // 문자열이면 파싱, 배열이면 그대로 사용
+        if(typeof seqs==='string'){
+          seqs=JSON.parse(seqs);
+        }
+        if(Array.isArray(seqs)&&seqs.length>0){
+          initialSegs=seqs.map((seg,i)=>({
+            staffId:seg.staffId,
+            label:i===0?'헤어':(i===1?'메이크업':'시술'),
+            dur:seg.dur
+          }));
+        }
+      }catch(e){
+        console.error('[openDetail] staff_sequence 파싱 실패:',e,b.staff_sequence);
+      }
+    }
+
+    // staff_sequence가 없으면 requested_staff_id 사용 (단일 서비스)
+    if(initialSegs.length===0&&b.requested_staff_id){
+      initialSegs=[{staffId:b.requested_staff_id,label:'시술',dur:totalDur}];
+    }
+
+    console.log('[openDetail] editSegs 초기화:', initialSegs, 'from:', b.staff_sequence);
+    setEditSegs(initialSegs);
     setRejectReason('');
   }
 
@@ -1456,6 +1503,18 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onJumpDate}){
   const handleConfirm=async()=>{
     if(busy)return;
     setBusy(true);
+
+    console.log('[handleConfirm] 시작:', {
+      selected,
+      editSegs,
+      editDate,
+      editStart,
+      editEnd,
+      editService,
+      editDetail,
+      editStaffId
+    });
+
     // 여러 스텝 순서 배정이 있으면 첫 번째 스텝을 requested_staff_id로 저장
     const finalStaffId=editSegs.length>0?editSegs[0].staffId:(editStaffId||selected.requested_staff_id||null);
 
@@ -1464,23 +1523,28 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onJumpDate}){
     if(editSegs.length>0){
       // 편집된 경우: 배열을 그대로 전달 (Supabase가 JSONB로 처리)
       staffSequence=editSegs;
+      console.log('[handleConfirm] staff_sequence (편집됨):', staffSequence);
     }else if(selected.staff_sequence){
       // 편집하지 않았으면 기존 staff_sequence 유지
       // Supabase에서 가져온 값은 이미 파싱된 객체/배열이므로 그대로 전달
       staffSequence=selected.staff_sequence;
+      console.log('[handleConfirm] staff_sequence (기존 유지):', staffSequence, 'type:', typeof staffSequence);
     }
 
     const updates={
       status:'confirmed',
       confirmed_at:new Date().toISOString(),
       booking_date:editDate||selected.booking_date,
-      start_time:editStart||selected.start_time?.slice(0,5),
-      end_time:editEnd||selected.end_time?.slice(0,5),
+      start_time:(editStart||selected.start_time||'09:00').slice(0,5),
+      end_time:(editEnd||selected.end_time||'10:00').slice(0,5),
       service_type:editService||selected.service_type,
-      service_detail:editDetail,
+      service_detail:editDetail||'',
       requested_staff_id: finalStaffId,
       staff_sequence: staffSequence
     };
+
+    console.log('[handleConfirm] updates:', updates);
+
     // 시트를 먼저 닫고 (즉시 UX), 그 다음 API 호출
     closeDetail();
     await onConfirm({...selected,_updates:updates,_editSegs:editSegs});
