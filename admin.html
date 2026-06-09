@@ -1516,7 +1516,15 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onJumpDate}){
     });
 
     // 여러 스텝 순서 배정이 있으면 첫 번째 스텝을 requested_staff_id로 저장
-    const finalStaffId=editSegs.length>0?editSegs[0].staffId:(editStaffId||selected.requested_staff_id||null);
+    let finalStaffId=null;
+    if(editSegs.length>0){
+      finalStaffId=editSegs[0].staffId;
+    }else if(editStaffId){
+      finalStaffId=editStaffId;
+    }else if(selected.requested_staff_id){
+      finalStaffId=selected.requested_staff_id;
+    }
+    // finalStaffId가 여전히 null이면 그대로 null로 저장 (랜덤 배정)
 
     // 기존 staff_sequence 유지 (고객이 예약 시 설정한 경우)
     let staffSequence=null;
@@ -1544,6 +1552,7 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onJumpDate}){
     };
 
     console.log('[handleConfirm] updates:', updates);
+    console.log('[handleConfirm] requested_staff_id 최종값:', finalStaffId, 'type:', typeof finalStaffId);
 
     // 시트를 먼저 닫고 (즉시 UX), 그 다음 API 호출
     closeDetail();
