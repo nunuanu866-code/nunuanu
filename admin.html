@@ -125,7 +125,7 @@ console.warn = function(...args) {
   originalWarn.apply(console, args);
 };
 
-window.NUNU_ADMIN_RELEASE_ID = '20260710-schedule-edit-admin-display';
+window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-add-customer-keyboard-safe';
 console.log('누누아누 관리자 v2.0.0-FINAL-20260703-CUSTOMER-NO-DETAIL');
 console.log('React loaded:', typeof React !== 'undefined');
 console.log('ReactDOM loaded:', typeof ReactDOM !== 'undefined');
@@ -1608,17 +1608,56 @@ function PBtn({children,disabled,onClick,flex=1,loading=false,style:s={}}){
 function SBtn({children,onClick,flex=1,disabled=false,danger=false}){return <button className="nui-button" disabled={disabled} onClick={onClick} style={{flex,height:NUI.control.lg,borderRadius:NUI.radius.pill,border:`1px solid ${danger?T.danger:T.accent}`,background:danger?'#FEF2F2':T.surface,color:danger?T.danger:T.accent,fontSize:NUI.font.lg,fontWeight:600,letterSpacing:0,textTransform:'none',cursor:'pointer',opacity:disabled?.5:1,boxShadow:'none',padding:`0 ${NUI.space[6]}px`}}><span style={NUI_FIT}>{children}</span></button>;}
 
 
+function useVisualViewportFrame(){
+  const readFrame=()=>{
+    if(typeof window==='undefined')return{height:0,bottomInset:0};
+    const vv=window.visualViewport;
+    const layoutHeight=window.innerHeight||0;
+    if(!vv)return{height:layoutHeight,bottomInset:0};
+    const height=Math.round(vv.height||layoutHeight);
+    const bottomInset=Math.max(0,Math.round(layoutHeight-(vv.height||layoutHeight)-(vv.offsetTop||0)));
+    return{height,bottomInset};
+  };
+  const[frame,setFrame]=useState(readFrame);
+  useEffect(()=>{
+    if(typeof window==='undefined')return;
+    let raf=0;
+    const update=()=>{
+      cancelAnimationFrame(raf);
+      raf=requestAnimationFrame(()=>setFrame(readFrame()));
+    };
+    const vv=window.visualViewport;
+    update();
+    vv?.addEventListener('resize',update);
+    vv?.addEventListener('scroll',update);
+    window.addEventListener('resize',update);
+    window.addEventListener('orientationchange',update);
+    return()=>{
+      cancelAnimationFrame(raf);
+      vv?.removeEventListener('resize',update);
+      vv?.removeEventListener('scroll',update);
+      window.removeEventListener('resize',update);
+      window.removeEventListener('orientationchange',update);
+    };
+  },[]);
+  return frame;
+}
+
 function Sheet({children,onClose,step,totalSteps,onBack}){
+  const viewportFrame=useVisualViewportFrame();
+  const keyboardInset=viewportFrame.bottomInset>48?viewportFrame.bottomInset:0;
+  const safeHeight=viewportFrame.height?Math.max(keyboardInset?260:340,viewportFrame.height-8):0;
+  const sheetMaxHeight=safeHeight?`min(92dvh, ${safeHeight}px)`:'92dvh';
   return <>
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.46)',zIndex:40,animation:'fadeIn .2s'}}/>
-    <div style={{position:'fixed',left:0,right:0,bottom:0,background:T.surface,borderTopLeftRadius:NUI.radius.sheet,borderTopRightRadius:NUI.radius.sheet,zIndex:41,maxHeight:'92dvh',display:'flex',flexDirection:'column',animation:'sheetIn .28s cubic-bezier(.2,.8,.2,1)',paddingBottom:'env(safe-area-inset-bottom,0px)',overflowX:'hidden'}}>
+    <div style={{position:'fixed',left:0,right:0,bottom:keyboardInset,background:T.surface,borderTopLeftRadius:NUI.radius.sheet,borderTopRightRadius:NUI.radius.sheet,zIndex:41,maxHeight:sheetMaxHeight,display:'flex',flexDirection:'column',animation:'sheetIn .28s cubic-bezier(.2,.8,.2,1)',paddingBottom:'env(safe-area-inset-bottom,0px)',overflowX:'hidden',transition:'bottom .12s ease-out,max-height .12s ease-out'}}>
       <div style={{width:36,height:4,background:T.line,borderRadius:NUI.radius.xs,margin:`${NUI.space[5]}px auto 0`,flexShrink:0}}/>
       <div style={{display:'flex',alignItems:'center',padding:`${NUI.space[5]}px ${NUI.space[8]}px 0`,gap:NUI.space[5],flexShrink:0,minWidth:0}}>
         <button className="nui-button" onClick={onBack||onClose} style={{width:NUI.control.xs,height:NUI.control.xs,borderRadius:'50%',border:`1px solid ${T.line}`,background:T.surface,display:'flex',alignItems:'center',justifyContent:'center',fontSize:onBack?NUI.font.lg:NUI.font.md,fontWeight:700,color:T.ink,flexShrink:0}}>{onBack?'‹':'×'}</button>
         {step&&totalSteps&&<div style={{flex:1}}><StepBar step={step} total={totalSteps}/></div>}
         {step&&totalSteps&&<div style={{fontSize:NUI.font.xs,fontWeight:700,color:T.ink3,whiteSpace:'nowrap',flexShrink:0}}>{step}/{totalSteps}</div>}
       </div>
-      <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>{children}</div>
+      <div data-sheet-scroll="true" style={{flex:1,overflowY:'auto',overscrollBehaviorY:'contain',WebkitOverflowScrolling:'touch',scrollPaddingTop:12,scrollPaddingBottom:keyboardInset?220:80}}>{children}</div>
     </div>
   </>;
 }
@@ -3044,9 +3083,24 @@ function S1Date({draft,set,onNext,onClose,supaCustomers,onCustomerSelect}){
 function S2Customer({draft,set,onNext,onBack,onClose,customers}){
   const q=(draft.name||'').trim();
   const inputRef=useRef(null);
+  const searchWrapRef=useRef(null);
+  const viewportFrame=useVisualViewportFrame();
   const[showAutocomplete,setShowAutocomplete]=useState(false);
   const[focusedIndex,setFocusedIndex]=useState(-1);
-  useEffect(()=>{setTimeout(()=>inputRef.current?.focus(),100);},[]);
+  const autocompleteMaxHeight=Math.max(132,Math.min(238,Math.round((viewportFrame.height||window.innerHeight||640)*0.34)));
+  const keepCustomerSearchVisible=()=>{
+    requestAnimationFrame(()=>{
+      const wrap=searchWrapRef.current;
+      const scroller=wrap?.closest?.('[data-sheet-scroll="true"]');
+      if(!wrap||!scroller)return;
+      const sr=scroller.getBoundingClientRect();
+      const wr=wrap.getBoundingClientRect();
+      const needBottom=wr.bottom+Math.min(autocompleteMaxHeight,220)+18;
+      if(wr.top<sr.top+12)scroller.scrollTop-=sr.top+12-wr.top;
+      else if(needBottom>sr.bottom)scroller.scrollTop+=needBottom-sr.bottom;
+    });
+  };
+  useEffect(()=>{const timer=setTimeout(()=>{inputRef.current?.focus?.({preventScroll:true});keepCustomerSearchVisible();},260);return()=>clearTimeout(timer);},[]);
   const matches=useMemo(()=>{
     if(!q)return[];
     const qLower=q.toLowerCase();
@@ -3057,6 +3111,7 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
       return name.includes(qLower)||(qPhone&&phone.includes(qPhone));
     }).slice(0,5);
   },[q,customers]);
+  useEffect(()=>{if(showAutocomplete)keepCustomerSearchVisible();},[showAutocomplete,matches.length,autocompleteMaxHeight]);
   const enabled=!!draft.customer||q.length>=1;
   const pickCustomer=(customer)=>{
     set({...draft,customer,name:customer.name||''});
@@ -3068,7 +3123,7 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
     set({...draft,name:'',customer:null});
     setShowAutocomplete(false);
     setFocusedIndex(-1);
-    setTimeout(()=>inputRef.current?.focus?.(),0);
+    setTimeout(()=>{inputRef.current?.focus?.({preventScroll:true});keepCustomerSearchVisible();},0);
   };
   const handleInputChange=(e)=>{
     set({...draft,name:e.target.value,customer:null});
@@ -3096,13 +3151,13 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
   return <Sheet onClose={onClose} step={2} totalSteps={4} onBack={onBack}>
     <STitle title="누가 오시나요?" sub="이름이나 번호로 검색"/>
     <SBody>
-      <div style={{position:'relative',marginBottom:12,zIndex:20}}>
+      <div ref={searchWrapRef} style={{position:'relative',marginBottom:12,zIndex:20,scrollMarginTop:12,scrollMarginBottom:260}}>
         <div style={{height:52,display:'flex',alignItems:'center',gap:10,padding:'0 14px',borderRadius:14,border:`1.5px solid ${draft.name?T.ink:T.line}`,background:T.surface}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.ink3} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input ref={inputRef} value={draft.name} onChange={handleInputChange} onKeyDown={handleKeyDown} onFocus={()=>q&&setShowAutocomplete(true)} onBlur={handleBlur} placeholder="이름 또는 전화번호" autoComplete="off" style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:16,color:T.ink,fontWeight:500,minWidth:0}}/>
+          <input ref={inputRef} type="search" enterKeyHint="search" autoCapitalize="off" value={draft.name} onChange={handleInputChange} onKeyDown={handleKeyDown} onFocus={()=>{if(q)setShowAutocomplete(true);keepCustomerSearchVisible();}} onBlur={handleBlur} placeholder="이름 또는 전화번호" autoComplete="off" style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:16,color:T.ink,fontWeight:500,minWidth:0}}/>
           {draft.name&&<button type="button" onMouseDown={e=>e.preventDefault()} onClick={clearCustomerSearch} style={{width:22,height:22,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:11,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>}
         </div>
-        {showAutocomplete&&matches.length>0&&<div style={{position:'absolute',top:'calc(100% + 6px)',left:0,right:0,background:'#fff',border:`1px solid ${T.line}`,borderRadius:14,boxShadow:'0 8px 22px rgba(0,0,0,.14)',zIndex:40,maxHeight:238,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
+        {showAutocomplete&&matches.length>0&&<div style={{position:'absolute',top:'calc(100% + 6px)',left:0,right:0,background:'#fff',border:`1px solid ${T.line}`,borderRadius:14,boxShadow:'0 8px 22px rgba(0,0,0,.14)',zIndex:40,maxHeight:autocompleteMaxHeight,overflowY:'auto',overscrollBehaviorY:'contain',WebkitOverflowScrolling:'touch'}}>
           {matches.map((m,i)=><button
             key={m.id||`${m.name}-${m.phone}-${i}`}
             type="button"
