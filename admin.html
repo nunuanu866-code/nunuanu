@@ -125,7 +125,7 @@ console.warn = function(...args) {
   originalWarn.apply(console, args);
 };
 
-window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-search-dock-single';
+window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-search-layer-fix';
 console.log('누누아누 관리자 v2.0.0-FINAL-20260703-CUSTOMER-NO-DETAIL');
 console.log('React loaded:', typeof React !== 'undefined');
 console.log('ReactDOM loaded:', typeof ReactDOM !== 'undefined');
@@ -1646,9 +1646,9 @@ function useVisualViewportFrame(){
   },[]);
   return frame;
 }
-function Sheet({children,onClose,step,totalSteps,onBack}){
+function Sheet({children,onClose,step,totalSteps,onBack,keyboardAvoid=true}){
   const viewportFrame=useVisualViewportFrame();
-  const keyboardInset=viewportFrame.bottomInset>48?viewportFrame.bottomInset:0;
+  const keyboardInset=keyboardAvoid&&viewportFrame.bottomInset>48?viewportFrame.bottomInset:0;
   const safeHeight=viewportFrame.height?Math.max(keyboardInset?260:340,viewportFrame.height-8):0;
   const sheetMaxHeight=safeHeight?`min(92dvh, ${safeHeight}px)`:'92dvh';
   return <>
@@ -3113,9 +3113,10 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
     }).slice(0,6);
   },[q,customers]);
   const viewportH=viewportFrame.height||(typeof window!=='undefined'?window.innerHeight:640)||640;
+  const dockMaxHeight=Math.max(190,Math.min(330,Math.round(viewportH-24)));
+  const dockListMaxHeight=Math.max(96,Math.min(220,dockMaxHeight-78));
+  const dockBottom=viewportFrame.bottomInset>48?`${viewportFrame.bottomInset+8}px`:'max(10px, env(safe-area-inset-bottom, 0px))';
   const autocompleteMaxHeight=Math.max(126,Math.min(238,Math.round(viewportH*0.3)));
-  const dockListMaxHeight=Math.max(118,Math.min(250,Math.round(viewportH*0.28)));
-  const dockBottom=viewportFrame.bottomInset>48?`${viewportFrame.bottomInset+8}px`:'max(10px, calc(100vh - 100dvh + env(safe-area-inset-bottom, 0px)))';
   const enabled=!!draft.customer||q.length>=1;
   const mobileDockActive=dockSearchEnabled&&dockSearchOpen;
   const focusDockInput=()=>requestAnimationFrame(()=>dockInputRef.current?.focus?.({preventScroll:true}));
@@ -3212,10 +3213,27 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
       </div>
     </button>
   ):<div style={{padding:14,fontSize:13,fontWeight:700,color:T.ink2,textAlign:'center'}}>일치하는 고객 없음</div>;
+  const dockPanel=<div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',left:12,right:12,bottom:dockBottom,zIndex:80,background:T.surface,border:`1px solid ${T.line}`,borderRadius:22,boxShadow:'0 18px 55px rgba(0,0,0,.24)',padding:10,maxHeight:dockMaxHeight,display:'flex',flexDirection:'column',gap:8,overflow:'hidden'}}>
+    <div style={{height:50,display:'flex',alignItems:'center',gap:10,padding:'0 12px',borderRadius:16,border:`1.5px solid ${T.ink}`,background:T.surface,flexShrink:0}}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={T.ink3} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input ref={dockInputRef} type="search" enterKeyHint="search" autoCapitalize="off" value={draft.name} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="이름 또는 전화번호" autoComplete="off" style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:17,color:T.ink,fontWeight:800,minWidth:0}}/>
+      {draft.name&&<button type="button" onPointerDown={e=>e.preventDefault()} onClick={clearCustomerSearch} style={{width:28,height:28,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:13,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>}
+      <button type="button" onPointerDown={e=>e.preventDefault()} onClick={closeSearchDock} aria-label="검색 닫기" style={{width:34,height:34,borderRadius:'50%',border:'none',background:T.ink,color:'#fff',fontSize:18,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>✓</button>
+    </div>
+    <div style={{borderRadius:16,border:`1px solid ${T.line2}`,overflowY:'auto',WebkitOverflowScrolling:'touch',overscrollBehaviorY:'contain',maxHeight:dockListMaxHeight,background:T.surface,flexShrink:1}}>
+      {q? suggestionRows : customers.slice(0,4).map((m,i)=><button key={m.id||m.name} type="button" onPointerDown={e=>e.preventDefault()} onClick={()=>pickCustomer(m)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',width:'100%',textAlign:'left',border:'none',background:T.surface,borderBottom:i<Math.min(customers.length,4)-1?`1px solid ${T.line2}`:'none',cursor:'pointer'}}>
+        <div style={{width:34,height:34,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:900,flexShrink:0}}>{m.name?.[0]||'?'}</div>
+        <div style={{flex:1,minWidth:0}}><div className="nui-card-text" style={{fontSize:14,fontWeight:900}}>{m.name}</div><div className="nui-card-text" style={{fontSize:11,color:T.ink2,marginTop:1}}>방문 {m.visits||0}회</div></div>
+      </button>)}
+    </div>
+  </div>;
+  if(mobileDockActive)return <>
+    <div onClick={closeSearchDock} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.46)',zIndex:40,animation:'fadeIn .2s'}}/>
+    {dockPanel}
+  </>;
   return <Sheet onClose={onClose} step={2} totalSteps={4} onBack={onBack}>
     <STitle title="누가 오시나요?" sub="이름이나 번호로 검색"/>
     <SBody>
-      {!mobileDockActive&&<>
       <div ref={searchWrapRef} style={{position:'relative',marginBottom:12,zIndex:20,scrollMarginTop:12,scrollMarginBottom:260}}>
         <div
           onPointerDown={dockSearchEnabled?e=>{e.preventDefault();openSearchDock();}:undefined}
@@ -3228,7 +3246,7 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
           {suggestionRows}
         </div>}
       </div>
-      {q&&!(dockSearchEnabled&&dockSearchOpen)?<div style={{borderRadius:14,overflow:'hidden',border:`1px solid ${T.line}`}}>
+      {q?<div style={{borderRadius:14,overflow:'hidden',border:`1px solid ${T.line}`}}>
         {matches.length===0?<div style={{padding:16,fontSize:13,color:T.ink2,textAlign:'center'}}>일치하는 고객 없음</div>
         :matches.map((m,i)=>{const sel=draft.customer?.name===m.name;return <button key={m.id||m.name} onClick={()=>pickCustomer(m)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',width:'100%',textAlign:'left',border:'none',background:sel?T.line2:T.surface,borderBottom:i<matches.length-1?`1px solid ${T.line2}`:'none',cursor:'pointer'}}>
           <div style={{width:36,height:36,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,flexShrink:0}}>{m.name?.[0]||'?'}</div>
@@ -3236,7 +3254,7 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
           {m.visits>=5&&<Chip color="accent" size="xs">단골</Chip>}
           {sel&&<div style={{width:20,height:20,borderRadius:'50%',background:T.success,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</div>}
         </button>;})}
-      </div>:!q?<div>
+      </div>:<div>
         <div style={{fontSize:12,fontWeight:700,color:T.ink2,marginBottom:8}}>최근 방문</div>
         <div style={{borderRadius:14,overflow:'hidden',border:`1px solid ${T.line}`}}>
           {customers.slice(0,4).map((m,i)=><button key={m.id||m.name} onClick={()=>pickCustomer(m)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',width:'100%',textAlign:'left',border:'none',background:T.surface,borderBottom:i<3?`1px solid ${T.line2}`:'none',cursor:'pointer'}}>
@@ -3246,24 +3264,9 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
             <span style={{fontSize:16,color:T.ink3}}>›</span>
           </button>)}
         </div>
-      </div>:<div style={{padding:'14px 8px',fontSize:12,fontWeight:700,color:T.ink3,textAlign:'center'}}>키패드 위 검색창에서 고객을 선택하세요.</div>}
-      </>}
+      </div>}
     </SBody>
     <SFoot><PBtn disabled={!enabled} onClick={handleNext}>{draft.customer?'다음':q?`"${q}" 신규 등록 후 다음`:'다음'}</PBtn></SFoot>
-    {dockSearchEnabled&&dockSearchOpen&&<div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',left:12,right:12,bottom:dockBottom,zIndex:80,background:T.surface,border:`1px solid ${T.line}`,borderRadius:22,boxShadow:'0 18px 55px rgba(0,0,0,.24)',padding:10,maxHeight:'min(390px, calc(100dvh - 24px))',display:'flex',flexDirection:'column',gap:8,overflow:'hidden'}}>
-      <div style={{height:50,display:'flex',alignItems:'center',gap:10,padding:'0 12px',borderRadius:16,border:`1.5px solid ${T.ink}`,background:T.surface,flexShrink:0}}>
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={T.ink3} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input ref={dockInputRef} type="search" enterKeyHint="search" autoCapitalize="off" value={draft.name} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="이름 또는 전화번호" autoComplete="off" style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:17,color:T.ink,fontWeight:800,minWidth:0}}/>
-        {draft.name&&<button type="button" onPointerDown={e=>e.preventDefault()} onClick={clearCustomerSearch} style={{width:28,height:28,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:13,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>}
-        <button type="button" onPointerDown={e=>e.preventDefault()} onClick={closeSearchDock} aria-label="검색 닫기" style={{width:34,height:34,borderRadius:'50%',border:'none',background:T.ink,color:'#fff',fontSize:18,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>✓</button>
-      </div>
-      <div style={{borderRadius:16,border:`1px solid ${T.line2}`,overflowY:'auto',WebkitOverflowScrolling:'touch',overscrollBehaviorY:'contain',maxHeight:dockListMaxHeight,background:T.surface,flexShrink:1}}>
-        {q? suggestionRows : customers.slice(0,4).map((m,i)=><button key={m.id||m.name} type="button" onPointerDown={e=>e.preventDefault()} onClick={()=>pickCustomer(m)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',width:'100%',textAlign:'left',border:'none',background:T.surface,borderBottom:i<Math.min(customers.length,4)-1?`1px solid ${T.line2}`:'none',cursor:'pointer'}}>
-          <div style={{width:34,height:34,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:900,flexShrink:0}}>{m.name?.[0]||'?'}</div>
-          <div style={{flex:1,minWidth:0}}><div className="nui-card-text" style={{fontSize:14,fontWeight:900}}>{m.name}</div><div className="nui-card-text" style={{fontSize:11,color:T.ink2,marginTop:1}}>방문 {m.visits||0}회</div></div>
-        </button>)}
-      </div>
-    </div>}
   </Sheet>;
 }
 function S3Time({draft,set,onNext,onBack,onClose}){
