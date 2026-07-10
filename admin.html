@@ -125,7 +125,7 @@ console.warn = function(...args) {
   originalWarn.apply(console, args);
 };
 
-window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-customer-search-dock';
+window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-search-dock-resetbase-fix';
 console.log('누누아누 관리자 v2.0.0-FINAL-20260703-CUSTOMER-NO-DETAIL');
 console.log('React loaded:', typeof React !== 'undefined');
 console.log('ReactDOM loaded:', typeof ReactDOM !== 'undefined');
@@ -1630,6 +1630,7 @@ function useVisualViewportFrame(){
       raf=requestAnimationFrame(()=>setFrame(readFrame()));
     };
     const vv=window.visualViewport;
+    const resetBase=()=>{baseHeightRef.current=0;update();};
     update();
     vv?.addEventListener('resize',update);
     vv?.addEventListener('scroll',update);
