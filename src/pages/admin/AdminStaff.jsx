@@ -11,11 +11,12 @@ const COLOR_OPTIONS = [
 
 const EMPTY_FORM = {
   name: '', role: 'hair', title: '', email: '',
-  permission_level: 'full', color: '#7F77DD', is_admin: false, is_active: true,
+  permission_level: 'view_only', color: '#7F77DD', is_admin: false, is_active: true,
 }
 
 // ── 스텝 카드 ──────────────────────────────────────────────
-function StaffCard({ member, onEdit, onToggle, canEdit }) {
+function StaffCard({ member, onEdit, onToggle, onPermission, canEdit }) {
+  const hasFullPermission = member.permission_level === 'full' || member.is_admin
   return (
     <div className={`bg-white rounded-2xl p-4 shadow-sm border transition-all
       ${member.is_active ? 'border-gray-100' : 'border-gray-200 opacity-60'}`}>
@@ -56,6 +57,11 @@ function StaffCard({ member, onEdit, onToggle, canEdit }) {
               className="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors">
               ✏️
             </button>
+            <button onClick={() => onPermission(member)}
+              className={`h-8 px-2 rounded-lg text-[11px] font-semibold transition-colors
+                ${hasFullPermission ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-nunu text-white hover:opacity-90'}`}>
+              {hasFullPermission ? '해제' : '권한'}
+            </button>
             <button onClick={() => onToggle(member)}
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
                 ${member.is_active ? 'bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-400' : 'bg-green-50 hover:bg-green-100 text-green-500'}`}>
@@ -81,29 +87,37 @@ function StaffModal({ member, onClose, onSaved }) {
 
     setLoading(true)
     try {
+      const permissionLevel = form.is_admin || form.permission_level === 'full' ? 'full' : 'view_only'
       const payload = {
         name: form.name.trim(),
         role: form.role,
         title: form.title.trim() || null,
         email: form.email.trim().toLowerCase() || null,
-        permission_level: form.permission_level,
+        permission_level: permissionLevel,
         color: form.color,
-        is_admin: form.is_admin,
+        is_admin: permissionLevel === 'full',
         is_active: form.is_active,
       }
 
-      let error
+      let savedData = null
       if (member?.id && !member.id.startsWith('whitelist')) {
-        // 수정
-        ;({ error } = await supabase.from('staff').update(payload).eq('id', member.id))
+        // 수정 — .select().single()으로 수정된 행 즉시 반환
+        const { data, error } = await supabase
+          .from('staff').update(payload).eq('id', member.id)
+          .select().single()
+        if (error) throw error
+        savedData = data
       } else {
-        // 신규
-        ;({ error } = await supabase.from('staff').insert(payload))
+        // 신규 — .select().single()으로 삽입된 행 즉시 반환
+        const { data, error } = await supabase
+          .from('staff').insert(payload)
+          .select().single()
+        if (error) throw error
+        savedData = data
       }
 
-      if (error) throw error
       toast.success(member ? '스텝 정보가 수정됐습니다' : '스텝이 추가됐습니다')
-      onSaved()
+      onSaved(savedData)
     } catch (e) {
       toast.error(e.message || '저장 실패')
     } finally {
@@ -159,7 +173,7 @@ function StaffModal({ member, onClose, onSaved }) {
             <label className="text-sm font-medium text-gray-700 mb-2 block">권한</label>
             <div className="flex gap-2">
               {[['full', '전체 권한'], ['view_only', '조회만']].map(([v, l]) => (
-                <button key={v} onClick={() => set('permission_level', v)}
+                <button key={v} onClick={() => setForm(f => ({ ...f, permission_level: v, is_admin: v === 'full' }))}
                   className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-all
                     ${form.permission_level === v ? 'bg-nunu text-white border-nunu' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
                   {l}
@@ -195,7 +209,10 @@ function StaffModal({ member, onClose, onSaved }) {
               <p className="text-sm font-medium text-gray-700">관리자 권한</p>
               <p className="text-xs text-gray-400">예약 확정·거절·스텝 관리 가능</p>
             </div>
-            <button onClick={() => set('is_admin', !form.is_admin)}
+            <button onClick={() => setForm(f => {
+              const next = !f.is_admin
+              return { ...f, is_admin: next, permission_level: next ? 'full' : 'view_only' }
+            })}
               className={`w-12 h-6 rounded-full transition-all ${form.is_admin ? 'bg-nunu' : 'bg-gray-200'}`}>
               <div className={`w-5 h-5 bg-white rounded-full shadow transition-all mx-0.5 ${form.is_admin ? 'translate-x-6' : 'translate-x-0'}`} />
             </button>
@@ -235,9 +252,8 @@ export function AdminStaff() {
       if (error) throw error
       setMembers(data || [])
     } catch (e) {
-      // DB 테이블이 없으면 화이트리스트로 폴백
-      toast.error('스텝 목록을 불러올 수 없습니다 (DB 미설정)')
-      setMembers([])
+      // 오류 시 기존 목록 유지 (setMembers([]) 제거 — 전체 목록이 사라지는 버그 방지)
+      toast.error('스텝 목록을 불러올 수 없습니다')
     } finally {
       setLoading(false)
     }
@@ -258,6 +274,23 @@ export function AdminStaff() {
     }
   }
 
+  async function handlePermission(member) {
+    if (!canEdit) { toast.error('권한이 없습니다'); return }
+    const hasFullPermission = member.permission_level === 'full' || member.is_admin
+    const next = hasFullPermission ? 'view_only' : 'full'
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .update({ permission_level: next, is_admin: next === 'full' })
+        .eq('id', member.id)
+      if (error) throw error
+      toast.success(next === 'full' ? '전체 권한을 부여했습니다' : '조회 권한으로 변경했습니다')
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, permission_level: next, is_admin: next === 'full' } : m))
+    } catch (e) {
+      toast.error(e.message || '권한 변경 실패')
+    }
+  }
+
   function handleEdit(member) {
     setEditTarget(member)
     setShowModal(true)
@@ -273,9 +306,21 @@ export function AdminStaff() {
     setEditTarget(null)
   }
 
-  async function handleSaved() {
+  function handleSaved(savedMember) {
     handleClose()
-    await fetchStaff()
+    if (savedMember) {
+      // insert/update 응답 데이터로 로컬 state 직접 업데이트
+      // → fetchStaff 재조회 없이 즉시 반영, RLS 필터링 문제 원천 차단
+      setMembers(prev => {
+        const exists = prev.some(m => m.id === savedMember.id)
+        if (exists) {
+          return prev.map(m => m.id === savedMember.id ? savedMember : m)
+        }
+        return [...prev, savedMember]
+      })
+    } else {
+      fetchStaff()
+    }
   }
 
   const visible = members.filter(m => showInactive ? true : m.is_active)
@@ -326,7 +371,7 @@ export function AdminStaff() {
         <div className="flex flex-col gap-3">
           {visible.map(m => (
             <StaffCard key={m.id} member={m}
-              onEdit={handleEdit} onToggle={handleToggle} canEdit={canEdit} />
+              onEdit={handleEdit} onToggle={handleToggle} onPermission={handlePermission} canEdit={canEdit} />
           ))}
         </div>
       )}

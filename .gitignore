@@ -7,3 +7,12 @@ dist
 .vercel
 *.mjs
 .env
+*.log
+*.out.log
+*.err.log
+screenshots-*
+backups/
+*.psd
+patch_*.cjs
+DESIGN-*.md
+DESIGN_AUDIT_*.md

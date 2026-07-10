@@ -6,7 +6,7 @@ import { Button, Input } from '../../components/ui/index'
 import {
   format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   isBefore, isAfter, isSameDay, isToday, addMonths, subMonths,
-  addMinutes, parse, getDaysInMonth, getDay
+  getDaysInMonth, getDay
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import toast from 'react-hot-toast'
@@ -26,6 +26,23 @@ function generateSlots(openH = OPEN_HOUR, closeH = CLOSE_HOUR, step = SLOT_MIN) 
     }
   }
   return slots
+}
+
+function timeToMinutes(time, fallback = '00:00') {
+  const [h, m] = String(time || fallback).slice(0, 5).split(':').map(Number)
+  return (Number(h) || 0) * 60 + (Number(m) || 0)
+}
+
+function minutesToTime(total) {
+  const dayMinutes = 24 * 60
+  const normalized = ((Math.round(total) % dayMinutes) + dayMinutes) % dayMinutes
+  const h = Math.floor(normalized / 60)
+  const m = normalized % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function addTimeMinutes(time, delta) {
+  return minutesToTime(timeToMinutes(time) + Number(delta || 0))
 }
 
 // ─────────────────────────────────────────
@@ -184,9 +201,7 @@ export default function BookingRequest() {
         let t = b.start_time.slice(0, 5)
         while (t < b.end_time.slice(0, 5)) {
           if (dateSlotCount[date][t] !== undefined) dateSlotCount[date][t]++
-          const [h, m] = t.split(':').map(Number)
-          const next = addMinutes(new Date(2000, 0, 1, h, m), SLOT_MIN)
-          t = format(next, 'HH:mm')
+          t = addTimeMinutes(t, SLOT_MIN)
         }
       })
 
@@ -215,9 +230,7 @@ export default function BookingRequest() {
         let t = b.start_time.slice(0, 5)
         while (t < b.end_time.slice(0, 5)) {
           if (slotCount[t] !== undefined) slotCount[t]++
-          const [h, m] = t.split(':').map(Number)
-          const next = addMinutes(new Date(2000, 0, 1, h, m), SLOT_MIN)
-          t = format(next, 'HH:mm')
+          t = addTimeMinutes(t, SLOT_MIN)
         }
       })
       setTakenSlots(Object.entries(slotCount).filter(([, c]) => c >= MAX_CONCURRENT).map(([s]) => s))
@@ -229,7 +242,7 @@ export default function BookingRequest() {
 
   const duration = serviceType ? serviceDuration[serviceType] : 0
   const endTime = selectedTime && duration
-    ? format(addMinutes(parse(selectedTime, 'HH:mm', new Date()), duration), 'HH:mm')
+    ? addTimeMinutes(selectedTime, duration)
     : ''
 
   function isSlotAvailable(slot) {

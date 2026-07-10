@@ -77,8 +77,8 @@ export default function AdminLoginPage() {
 
         {/* 브랜드 */}
         <div className="mb-8 text-center">
-          <div className="w-16 h-16 bg-nunu rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
-            <span className="text-gold text-2xl font-bold">N</span>
+          <div className="w-16 h-16 bg-apple-black rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white text-2xl font-semibold tracking-[-.374px]">N</span>
           </div>
           <h1 className="text-2xl font-bold text-nunu mb-1">관리자 · 스텝 로그인</h1>
           <p className="text-gray-400 text-sm">등록된 이메일 계정으로 접속하세요</p>
@@ -96,18 +96,18 @@ export default function AdminLoginPage() {
         </div>
 
         {/* 탭 */}
-        <div className="flex bg-gray-100 rounded-xl p-1 mb-5">
+        <div className="flex bg-apple-parchment rounded-full p-1 mb-5 border border-apple-hairline">
           <button
             onClick={() => { setMode('login'); setMagicSent(false) }}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all
-              ${mode === 'login' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              ${mode === 'login' ? 'bg-white text-apple-ink' : 'text-apple-muted hover:text-apple-ink'}`}
           >
             이메일 로그인
           </button>
           <button
             onClick={() => { setMode('magic'); setMagicSent(false) }}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all
-              ${mode === 'magic' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              ${mode === 'magic' ? 'bg-white text-apple-ink' : 'text-apple-muted hover:text-apple-ink'}`}
           >
             링크로 로그인
           </button>

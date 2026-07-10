@@ -1,0 +1,25 @@
+{
+  "name": "누누아누 관리자",
+  "short_name": "누누아누",
+  "description": "누누아누 관리자 예약 스케줄 앱",
+  "id": "/admin.html",
+  "start_url": "/admin.html?v=20260707-mobile-timeline-stabilize",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f5f2",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/nunuanu-app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/nunuanu-app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

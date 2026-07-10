@@ -107,8 +107,8 @@ export default function LoginPage() {
         <div className="flex-1 flex flex-col justify-center px-6 pb-6">
           {/* 브랜드 */}
           <div className="mb-10 text-center">
-            <div className="w-20 h-20 bg-nunu rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg">
-              <span className="text-gold text-3xl font-bold">N</span>
+            <div className="w-20 h-20 bg-apple-black rounded-3xl flex items-center justify-center mx-auto mb-5">
+              <span className="text-white text-3xl font-semibold tracking-[-.374px]">N</span>
             </div>
             <h1 className="text-3xl font-bold text-nunu mb-1">누누아누</h1>
             <p className="text-gray-400 text-sm">NUNUNANU · CHEONGDAM</p>
@@ -133,9 +133,9 @@ export default function LoginPage() {
 
             <button
               onClick={() => enterDemo('customer')}
-              className="flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 bg-gray-50 hover:border-nunu/30 hover:bg-nunu/5 transition-all active:scale-98"
+              className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:border-nunu/30 hover:bg-white transition-all active:scale-98"
             >
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg flex-shrink-0">
+              <div className="w-11 h-11 rounded-full bg-apple-black flex items-center justify-center text-white text-lg flex-shrink-0">
                 👩
               </div>
               <div className="text-left">
@@ -147,9 +147,9 @@ export default function LoginPage() {
 
             <button
               onClick={() => enterDemo('admin')}
-              className="flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 bg-gray-50 hover:border-red-200 hover:bg-red-50/50 transition-all active:scale-98"
+              className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:border-nunu/30 hover:bg-white transition-all active:scale-98"
             >
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white text-lg flex-shrink-0">
+              <div className="w-11 h-11 rounded-full bg-apple-black flex items-center justify-center text-white text-lg flex-shrink-0">
                 👑
               </div>
               <div className="text-left">
@@ -161,9 +161,9 @@ export default function LoginPage() {
 
             <button
               onClick={() => enterDemo('staff')}
-              className="flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 bg-gray-50 hover:border-purple-200 hover:bg-purple-50/50 transition-all active:scale-98"
+              className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:border-nunu/30 hover:bg-white transition-all active:scale-98"
             >
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-lg flex-shrink-0">
+              <div className="w-11 h-11 rounded-full bg-apple-black flex items-center justify-center text-white text-lg flex-shrink-0">
                 ✂️
               </div>
               <div className="text-left">
@@ -195,7 +195,7 @@ export default function LoginPage() {
 
           <div className="mb-8 text-center">
             <div className="w-16 h-16 bg-nunu rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-gold text-2xl font-bold">N</span>
+              <span className="text-white text-2xl font-semibold tracking-[-.374px]">N</span>
             </div>
             <h1 className="text-2xl font-bold text-nunu mb-1">누누아누</h1>
             <p className="text-gray-400 text-sm">전화번호로 간편하게 시작하세요</p>

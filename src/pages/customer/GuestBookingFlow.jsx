@@ -6,32 +6,166 @@ import { Button, Input } from '../../components/ui/index'
 import {
   format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   isBefore, isAfter, isToday, addMonths, subMonths,
-  addMinutes, parse, getDay
+  getDay, startOfDay
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+import { createAdminPushEvent, createAppNotification } from '../../lib/notifications'
+import { disableCustomerPush, enableCustomerPush, getCustomerPushDevice } from '../../lib/customerPush'
 
-const OPEN_HOUR = 4
-const CLOSE_HOUR = 22
+const OPEN_HOUR = 0
+const CLOSE_HOUR = 24
+const CHECKOUT_START_HOUR = 4
+const CHECKOUT_END_HOUR = 21
 const SLOT_MIN = 10
 const MAX_CONCURRENT = 2
-const TODAY = new Date()
+const TODAY = startOfDay(new Date())
+const BOOKING_START_DATE = addDays(TODAY, 1)
 const MAX_DATE = addDays(TODAY, 60)
+const STAFF_VISIBILITY_SERVICE = 'STAFF_VISIBILITY'
+const STAFF_PROFILE_SERVICE = 'STAFF_PROFILE'
 
-function generateSlots() {
+function generateSlots(startHour = OPEN_HOUR, endHour = CLOSE_HOUR, includeEnd = false) {
   const slots = []
-  for (let h = OPEN_HOUR; h < CLOSE_HOUR; h++) {
-    for (let m = 0; m < 60; m += SLOT_MIN) {
-      slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`)
-    }
+  const startMin = startHour * 60
+  const endMin = endHour * 60 - (includeEnd ? 0 : SLOT_MIN)
+  for (let total = startMin; total <= endMin; total += SLOT_MIN) {
+    const h = Math.floor(total / 60)
+    const m = total % 60
+    slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`)
   }
   return slots
 }
 const ALL_SLOTS = generateSlots()
+const CHECKOUT_SLOTS = generateSlots(CHECKOUT_START_HOUR, CHECKOUT_END_HOUR, true)
+
+function timeToMinutes(time, fallback = '00:00') {
+  const [h, m] = String(time || fallback).slice(0, 5).split(':').map(Number)
+  return (Number(h) || 0) * 60 + (Number(m) || 0)
+}
+
+function minutesToTime(total) {
+  const dayMinutes = 24 * 60
+  const normalized = ((Math.round(total) % dayMinutes) + dayMinutes) % dayMinutes
+  const h = Math.floor(normalized / 60)
+  const m = normalized % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function addTimeMinutes(time, delta) {
+  return minutesToTime(timeToMinutes(time) + Number(delta || 0))
+}
+
+function normalizeStaffRole(role) {
+  const r = String(role || '').toLowerCase()
+  if (r === 'makeup' || r.includes('메이크업') || r.includes('make')) return 'makeup'
+  return 'hair'
+}
+
+function isStaffBookingVisible(staff) {
+  return staff?.is_active !== false && staff?.booking_visible !== false
+}
+
+function parseStaffVisibilityRow(row) {
+  if (row?.service_detail !== STAFF_VISIBILITY_SERVICE || row.status === 'cancelled') return null
+  try {
+    const meta = JSON.parse(row.customer_memo || '{}') || {}
+    if (meta.type !== 'staff_visibility' || !meta.staff_id) return null
+    return {
+      staffId: meta.staff_id,
+      bookingVisible: meta.booking_visible !== false,
+      updatedAt: meta.updated_at || row.created_at
+    }
+  } catch {
+    return null
+  }
+}
+
+function staffVisibilityMap(rows) {
+  const sorted = (rows || [])
+    .map(parseStaffVisibilityRow)
+    .filter(Boolean)
+    .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+  const map = new Map()
+  sorted.forEach(v => {
+    if (!map.has(v.staffId)) map.set(v.staffId, v.bookingVisible)
+  })
+  return map
+}
+
+function parseStaffProfileRow(row) {
+  if (row?.service_detail !== STAFF_PROFILE_SERVICE || row.status === 'cancelled') return null
+  try {
+    const meta = JSON.parse(row.customer_memo || '{}') || {}
+    if (meta.type !== 'staff_profile' || !meta.staff_id) return null
+    return {
+      staffId: meta.staff_id,
+      profile: {
+        name: meta.name || '',
+        role: normalizeStaffRole(meta.role || 'hair'),
+        title: meta.title || staffTitleFallback(meta.role || 'hair'),
+        color: meta.color || '',
+        phone: meta.phone || '',
+        is_active: meta.is_active !== false
+      },
+      updatedAt: meta.updated_at || row.created_at
+    }
+  } catch {
+    return null
+  }
+}
+
+function staffProfileMap(rows) {
+  const sorted = (rows || [])
+    .map(parseStaffProfileRow)
+    .filter(Boolean)
+    .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+  const map = new Map()
+  sorted.forEach(v => {
+    if (!map.has(v.staffId)) map.set(v.staffId, v.profile)
+  })
+  return map
+}
+
+function staffTitleFallback(role) {
+  return normalizeStaffRole(role) === 'makeup' ? '메이크업 스텝' : '헤어 스텝'
+}
+
+function virtualStaffRow(staffId, profile = {}, bookingVisible = true) {
+  const role = normalizeStaffRole(profile.role || 'hair')
+  return {
+    id: staffId,
+    name: profile.name || '스텝',
+    role,
+    title: profile.title || staffTitleFallback(role),
+    color: profile.color || '#6b7280',
+    phone: profile.phone || '',
+    is_active: profile.is_active !== false,
+    booking_visible: bookingVisible,
+    _virtual: true
+  }
+}
+
+function sortStaffForBooking(a, b) {
+  const titleDiff = staffTitleRank(a.title) - staffTitleRank(b.title)
+  if (titleDiff) return titleDiff
+  const order = { makeup: 0, hair: 1 }
+  const roleDiff = (order[normalizeStaffRole(a.role)] ?? 9) - (order[normalizeStaffRole(b.role)] ?? 9)
+  if (roleDiff) return roleDiff
+  return String(a.name || '').localeCompare(String(b.name || ''), 'ko')
+}
+
+function staffTitleRank(title) {
+  const t = String(title || '')
+  if (t.includes('원장')) return t.includes('부원장') ? 1 : 0
+  if (t.includes('실장')) return 2
+  if (t.includes('디자이너')) return 3
+  return 9
+}
 
 // ── 달력 컴포넌트 ────────────────────────────────────────────────
 function MonthCalendar({ selectedDate, onSelect, confirmedFullDates = [] }) {
-  const [viewMonth, setViewMonth] = useState(() => startOfMonth(addDays(TODAY, 1)))
+  const [viewMonth, setViewMonth] = useState(() => startOfMonth(BOOKING_START_DATE))
   const monthStart = startOfMonth(viewMonth)
   const monthEnd = endOfMonth(viewMonth)
   const calStart = startOfWeek(monthStart, { weekStartsOn: 0 })
@@ -41,7 +175,7 @@ function MonthCalendar({ selectedDate, onSelect, confirmedFullDates = [] }) {
   let d = calStart
   while (!isAfter(d, calEnd)) { days.push(new Date(d)); d = addDays(d, 1) }
 
-  const canGoPrev = isAfter(viewMonth, startOfMonth(addDays(TODAY, 1)))
+  const canGoPrev = isAfter(viewMonth, startOfMonth(BOOKING_START_DATE))
   const canGoNext = isBefore(viewMonth, startOfMonth(addMonths(TODAY, 2)))
   const weekDays = ['일','월','화','수','목','금','토']
 
@@ -64,10 +198,10 @@ function MonthCalendar({ selectedDate, onSelect, confirmedFullDates = [] }) {
         {days.map((day, idx) => {
           const dateStr = format(day, 'yyyy-MM-dd')
           const isCurrentMonth = day.getMonth() === viewMonth.getMonth()
-          const isPast = isBefore(day, addDays(TODAY, 1))
+          const isPast = isBefore(day, BOOKING_START_DATE)
           const isTooFar = isAfter(day, MAX_DATE)
-          const isFull = confirmedFullDates.includes(dateStr)
-          const disabled = !isCurrentMonth || isPast || isTooFar || isFull
+          const isFull = false
+          const disabled = !isCurrentMonth || isPast || isTooFar
           const isSelected = selectedDate === dateStr
           const isSun = getDay(day) === 0
           const isSat = getDay(day) === 6
@@ -129,17 +263,17 @@ function TimeWheel({ value, onChange, availableSlots }) {
       {/* 중앙 선택 하이라이트 */}
       <div style={{
         position: 'absolute', left: 0, right: 0, top: HALF * ROW, height: ROW,
-        background: '#f5f5f8', borderTop: '1.5px solid #1A1A2E22', borderBottom: '1.5px solid #1A1A2E22',
+        background: '#f5f5f7', borderTop: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0',
         zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
-        <span style={{ fontSize: 22, fontWeight: 800, color: '#1A1A2E', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>
+        <span style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.224px' }}>
           {value || '선택'}
         </span>
       </div>
       {/* 위 페이드 */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: HALF * ROW, background: 'linear-gradient(white, transparent)', zIndex: 2, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: HALF * ROW, background: 'rgba(255,255,255,.88)', zIndex: 2, pointerEvents: 'none' }} />
       {/* 아래 페이드 */}
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: HALF * ROW, background: 'linear-gradient(transparent, white)', zIndex: 2, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: HALF * ROW, background: 'rgba(255,255,255,.88)', zIndex: 2, pointerEvents: 'none' }} />
       {/* 스크롤 리스트 */}
       <div ref={ref} onScroll={onScroll}
         style={{ height: '100%', overflowY: 'scroll', scrollSnapType: 'y mandatory', paddingTop: HALF * ROW, paddingBottom: HALF * ROW }}>
@@ -195,6 +329,8 @@ export default function GuestBookingFlow() {
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
 
   // 서비스 기본 설명 자동 기입
   const serviceDetailDefaults = {
@@ -215,16 +351,111 @@ export default function GuestBookingFlow() {
     return d.startsWith('0') ? '+82' + d.slice(1) : '+82' + d
   }
 
+  useEffect(() => {
+    setPushEnabled(!!getCustomerPushDevice(phone))
+  }, [phone])
+
+  async function toggleBookingResultPush() {
+    if (pushBusy) return
+    setPushBusy(true)
+    try {
+      if (pushEnabled) {
+        await disableCustomerPush(phone)
+        setPushEnabled(false)
+        toast.success('예약 알림이 꺼졌습니다')
+      } else {
+        await enableCustomerPush(phone)
+        setPushEnabled(true)
+        toast.success('예약 확정/거절 알림이 켜졌습니다')
+      }
+    } catch (error) {
+      toast.error(error?.message || '알림 설정에 실패했습니다')
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
   // 스텝 목록 로드
   useEffect(() => {
-    supabase.from('staff').select('*').eq('is_active', true)
-      .then(({ data }) => setStaffList(data || []))
+    let mounted = true
+    async function loadStaff() {
+      const [{ data }, { data: visibilityRows }, { data: profileRows }] = await Promise.all([
+        supabase.from('staff').select('*').eq('is_active', true),
+        supabase
+          .from('bookings')
+          .select('id, status, service_detail, customer_memo, created_at')
+          .eq('service_detail', STAFF_VISIBILITY_SERVICE)
+          .order('created_at', { ascending: false })
+          .limit(1000),
+        supabase
+          .from('bookings')
+          .select('id, status, service_detail, customer_memo, created_at')
+          .eq('service_detail', STAFF_PROFILE_SERVICE)
+          .order('created_at', { ascending: false })
+          .limit(1000)
+      ])
+      if (!mounted) return
+      const visibilityByStaff = staffVisibilityMap(visibilityRows)
+      const profileByStaff = staffProfileMap(profileRows)
+      const realRows = (data || [])
+        .map(s => {
+          const profile = profileByStaff.get(s.id) || {}
+          const role = normalizeStaffRole(profile.role || s.role)
+          return {
+            ...s,
+            ...profile,
+            name: profile.name || s.name,
+            role,
+            title: profile.title || s.title || staffTitleFallback(role),
+            color: profile.color || s.color,
+            is_active: profile.is_active !== false && s.is_active !== false,
+            booking_visible: visibilityByStaff.has(s.id) ? visibilityByStaff.get(s.id) : true,
+            _virtual: false
+          }
+        })
+      const realIds = new Set(realRows.map(s => s.id))
+      const virtualRows = Array.from(profileByStaff.entries())
+        .filter(([staffId, profile]) => !realIds.has(staffId) && profile?.is_active !== false)
+        .map(([staffId, profile]) => virtualStaffRow(staffId, profile, visibilityByStaff.has(staffId) ? visibilityByStaff.get(staffId) : true))
+      const rows = [...realRows, ...virtualRows]
+        .filter(isStaffBookingVisible)
+        .sort(sortStaffForBooking)
+      setStaffList(rows)
+    }
+    loadStaff()
+    const channel = supabase
+      .channel('customer-staff-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff' }, loadStaff)
+      .subscribe()
+    const visibilityChannel = supabase
+      .channel('customer-staff-visibility-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `service_detail=eq.${STAFF_VISIBILITY_SERVICE}` }, loadStaff)
+      .subscribe()
+    const profileChannel = supabase
+      .channel('customer-staff-profile-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `service_detail=eq.${STAFF_PROFILE_SERVICE}` }, loadStaff)
+      .subscribe()
+    const timer = setInterval(loadStaff, 5000)
+    return () => {
+      mounted = false
+      clearInterval(timer)
+      supabase.removeChannel(channel)
+      supabase.removeChannel(visibilityChannel)
+      supabase.removeChannel(profileChannel)
+    }
   }, [])
+
+  useEffect(() => {
+    if (selectedStaff && !staffList.some(s => s.id === selectedStaff.id)) setSelectedStaff(null)
+    if (selectedHairStaff && !staffList.some(s => s.id === selectedHairStaff.id)) setSelectedHairStaff(null)
+    if (selectedMakeupStaff && !staffList.some(s => s.id === selectedMakeupStaff.id)) setSelectedMakeupStaff(null)
+  }, [staffList, selectedStaff, selectedHairStaff, selectedMakeupStaff])
 
   // 달력용: 확정 예약으로 꽉 찬 날짜 계산
   useEffect(() => {
+    let mounted = true
     async function loadFullDates() {
-      const from = format(addDays(TODAY, 1), 'yyyy-MM-dd')
+      const from = format(BOOKING_START_DATE, 'yyyy-MM-dd')
       const to = format(MAX_DATE, 'yyyy-MM-dd')
       const { data } = await supabase
         .from('bookings')
@@ -243,42 +474,32 @@ export default function GuestBookingFlow() {
         let t = b.start_time.slice(0, 5)
         while (t < b.end_time.slice(0, 5)) {
           if (dateSlotCount[date][t] !== undefined) dateSlotCount[date][t]++
-          const [h, m] = t.split(':').map(Number)
-          t = format(addMinutes(new Date(2000, 0, 1, h, m), SLOT_MIN), 'HH:mm')
+          t = addTimeMinutes(t, SLOT_MIN)
         }
       })
       const full = Object.entries(dateSlotCount)
         .filter(([, slots]) => Object.values(slots).every(c => c >= MAX_CONCURRENT))
         .map(([date]) => date)
-      setConfirmedFullDates(full)
+      if (mounted) setConfirmedFullDates(full)
     }
     loadFullDates()
+    const channel = supabase
+      .channel('customer-full-dates-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, loadFullDates)
+      .subscribe()
+    const timer = setInterval(loadFullDates, 10000)
+    return () => {
+      mounted = false
+      clearInterval(timer)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   // 날짜 선택 시 해당 날 예약 슬롯 로드
   useEffect(() => {
     if (!selectedDate) return
-    async function loadTaken() {
-      setSlotsLoading(true)
-      const { data } = await supabase
-        .from('bookings')
-        .select('start_time, end_time')
-        .eq('booking_date', selectedDate)
-        .eq('status', 'confirmed')
-      const slotCount = {}
-      ALL_SLOTS.forEach(s => { slotCount[s] = 0 })
-      ;(data || []).forEach(b => {
-        let t = b.start_time.slice(0, 5)
-        while (t < b.end_time.slice(0, 5)) {
-          if (slotCount[t] !== undefined) slotCount[t]++
-          const [h, m] = t.split(':').map(Number)
-          t = format(addMinutes(new Date(2000, 0, 1, h, m), SLOT_MIN), 'HH:mm')
-        }
-      })
-      setTakenSlots(Object.entries(slotCount).filter(([,c]) => c >= MAX_CONCURRENT).map(([s]) => s))
-      setSlotsLoading(false)
-    }
-    loadTaken()
+    setTakenSlots([])
+    setSlotsLoading(false)
     setSelectedTime('')
   }, [selectedDate])
 
@@ -297,40 +518,30 @@ export default function GuestBookingFlow() {
   // selectedTime = 고객이 선택한 "나가는 시간 (체크아웃)" = end_time
   // startTime    = 체크아웃 - 시술시간 = 자동 계산된 시작 시간
   const startTime = selectedTime && duration
-    ? format(addMinutes(parse(selectedTime, 'HH:mm', new Date()), -duration), 'HH:mm')
+    ? addTimeMinutes(selectedTime, -duration)
     : ''
 
   // 체크아웃 슬롯이 유효한지 확인 (시작 시간부터 체크아웃까지 모두 여유 있어야 함)
   function isCheckoutSlotAvailable(checkoutSlot) {
-    if (!duration) return true
-    const steps = duration / SLOT_MIN
-    const checkoutIdx = ALL_SLOTS.indexOf(checkoutSlot)
-    if (checkoutIdx < 0) return false
-    const startIdx = checkoutIdx - steps
-    if (startIdx < 0) return false // 영업 시작 전 시작이면 불가
-    for (let i = startIdx; i < checkoutIdx; i++) {
-      const s = ALL_SLOTS[i]
-      if (!s || takenSlots.includes(s)) return false
-    }
-    return true
+    return ALL_SLOTS.includes(checkoutSlot)
   }
 
   // 선택 가능한 체크아웃 시간 목록
-  const availableCheckoutSlots = ALL_SLOTS.filter(slot => isCheckoutSlotAvailable(slot))
+  const availableCheckoutSlots = CHECKOUT_SLOTS
 
   // 서비스 선택 시 첫 번째 가능한 체크아웃 시간으로 자동 선택
   useEffect(() => {
-    if (serviceType && availableCheckoutSlots.length > 0 && !selectedTime) {
-      setSelectedTime(availableCheckoutSlots[0])
+    if (selectedTime && !availableCheckoutSlots.includes(selectedTime)) {
+      setSelectedTime('')
     }
-  }, [serviceType, availableCheckoutSlots.length])
+  }, [selectedTime])
 
   const selectedDateLabel = selectedDate
     ? format(new Date(selectedDate), 'M월 d일 (E)', { locale: ko }) : ''
 
   // 스텝 - 카테고리별 필터
-  const hairStaff = staffList.filter(s => s.role === 'hair')
-  const makeupStaff = staffList.filter(s => s.role === 'makeup')
+  const hairStaff = staffList.filter(s => normalizeStaffRole(s.role) === 'hair')
+  const makeupStaff = staffList.filter(s => normalizeStaffRole(s.role) === 'makeup')
 
   // 담당 스텝 표시 라벨 (요약용)
   function getStaffLabel() {
@@ -383,21 +594,31 @@ export default function GuestBookingFlow() {
             { staff_id: selectedHairStaff?.id || null, role: 'hair', label: '헤어' },
             { staff_id: selectedMakeupStaff?.id || null, role: 'makeup', label: '메이크업' }
           ]
-        : null
+        : (selectedStaff ? [{ staff_id: selectedStaff.id, role: normalizeStaffRole(selectedStaff.role || serviceType), label: serviceType === 'makeup' ? '메이크업' : '헤어' }] : null)
 
-      const { error } = await supabase.from('bookings').insert({
+      const { data: inserted, error } = await supabase.from('bookings').insert({
         customer_id: customerId,
         booking_date: selectedDate,
         start_time: startTime,
         end_time: selectedTime,
         service_type: serviceType,
         service_detail: serviceDetail,
-        requested_staff_id: serviceType !== 'both' ? (selectedStaff?.id || null) : null,
+        requested_staff_id: serviceType !== 'both' && selectedStaff?._virtual !== true ? (selectedStaff?.id || null) : null,
         assigned_staff: assignedStaffData,
         customer_memo: customerMemo,
         status: 'pending'
-      })
+      }).select('id').single()
       if (error) throw error
+      await createAppNotification({
+        bookingId: inserted?.id,
+        phone: phoneFull,
+        type: 'booking_request',
+      })
+      await createAdminPushEvent({
+        bookingId: inserted?.id,
+        phone: phoneFull,
+        type: 'booking_request',
+      })
       setShowConfirm(false)
       setStep(5) // 완료 페이지
     } catch (e) {
@@ -421,7 +642,14 @@ export default function GuestBookingFlow() {
             <span className="text-lg">🏠</span>
             <span className="font-medium">홈으로</span>
           </button>
-          <span className="text-sm font-bold text-nunu">누누아누</span>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="text-sm font-bold text-nunu px-2 py-1 rounded-lg hover:bg-nunu/5 active:bg-nunu/10 transition-colors"
+            aria-label="홈으로 이동"
+          >
+            누누아누
+          </button>
         </div>
 
         {/* 완료 내용 */}
@@ -446,6 +674,19 @@ export default function GuestBookingFlow() {
           </div>
 
           {/* 예약 요약 */}
+          <button
+            type="button"
+            onClick={toggleBookingResultPush}
+            disabled={pushBusy}
+            className={`w-full rounded-2xl py-3.5 font-bold text-sm mb-4 transition-all ${
+              pushEnabled
+                ? 'bg-white text-gray-700 border border-gray-300 active:bg-gray-50'
+                : 'bg-gray-900 text-white active:scale-98 shadow-md shadow-gray-900/10'
+            } disabled:opacity-80`}
+          >
+            {pushBusy ? (pushEnabled ? '알림 끄는 중...' : '알림 설정 중...') : pushEnabled ? '예약 알림 끄기' : '예약 확정/거절 알림 켜기'}
+          </button>
+
           <div className="w-full bg-gray-50 rounded-2xl p-5 text-sm text-left mb-8 flex flex-col gap-2.5">
             <div className="flex justify-between">
               <span className="text-gray-500">날짜</span>
@@ -468,12 +709,12 @@ export default function GuestBookingFlow() {
             {serviceType === 'both' ? (
               <>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">✂️ 헤어</span>
-                  <span className="font-semibold text-gray-900">{selectedHairStaff ? `${selectedHairStaff.name} ${selectedHairStaff.title}` : '랜덤 배정'}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-gray-500">💄 메이크업</span>
                   <span className="font-semibold text-gray-900">{selectedMakeupStaff ? `${selectedMakeupStaff.name} ${selectedMakeupStaff.title}` : '랜덤 배정'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">✂️ 헤어</span>
+                  <span className="font-semibold text-gray-900">{selectedHairStaff ? `${selectedHairStaff.name} ${selectedHairStaff.title}` : '랜덤 배정'}</span>
                 </div>
               </>
             ) : (
@@ -509,7 +750,14 @@ export default function GuestBookingFlow() {
           <p className="text-xs text-gray-400">STEP {step}/4</p>
           <p className="font-bold text-gray-900">{stepLabels[step - 1]}</p>
         </div>
-        <span className="text-sm font-bold text-nunu">누누아누</span>
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="text-sm font-bold text-nunu px-2 py-1 rounded-lg hover:bg-nunu/5 active:bg-nunu/10 transition-colors"
+          aria-label="홈으로 이동"
+        >
+          누누아누
+        </button>
       </div>
 
       {/* 진행바 */}
@@ -529,7 +777,7 @@ export default function GuestBookingFlow() {
             </div>
             <div className="bg-nunu/5 border border-nunu/20 rounded-2xl px-4 py-3 flex items-start gap-2">
               <span className="text-lg mt-0.5">💬</span>
-              <p className="text-sm text-nunu/80">입력하신 정보로 예약 확인 및 연락을 드립니다</p>
+              <p className="text-sm text-nunu/80">예약 요청 후 관리자가 예약 확정을 하면 알림이 울립니다</p>
             </div>
             <Input
               label="이름"
@@ -575,7 +823,7 @@ export default function GuestBookingFlow() {
                       }
                     }}
                     className="w-14 h-14 text-center text-2xl font-bold border-2 rounded-2xl outline-none transition-colors focus:border-nunu"
-                    style={{ borderColor: pin[i] ? '#1A1A2E' : '#e5e7eb' }}
+                    style={{ borderColor: pin[i] ? '#0066cc' : '#e0e0e0', background: pin[i] ? '#f5f5f7' : '#fff' }}
                   />
                 ))}
               </div>
@@ -670,7 +918,7 @@ export default function GuestBookingFlow() {
             {serviceType && (
               <div>
                 <div className="mb-3">
-                  <p className="text-sm font-semibold text-gray-700">나가셔야 하는 시간</p>
+                  <p className="text-2xl font-extrabold text-gray-900">나가셔야 하는 시간</p>
                   <p className="text-xs text-gray-400 mt-0.5">살롱을 나가실 시간을 선택하시면 시술 시작 시간이 자동 계산됩니다</p>
                 </div>
                 {slotsLoading ? (
@@ -685,15 +933,10 @@ export default function GuestBookingFlow() {
                       availableSlots={availableCheckoutSlots}
                     />
                     {selectedTime && startTime && (
-                      <div className="mt-3 bg-nunu/5 border border-nunu/20 rounded-xl px-4 py-3 flex flex-col gap-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-nunu text-sm">🚗 나가시는 시간</span>
-                          <span className="text-sm font-bold text-nunu">{selectedTime}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400 text-sm">✂️ 시술 시작</span>
-                          <span className="text-sm font-semibold text-gray-700">{startTime}</span>
-                          <span className="text-xs text-gray-400">({duration}분 소요)</span>
+                      <div className="mt-4 bg-nunu/10 border-2 border-nunu/30 rounded-2xl px-5 py-5 shadow-sm">
+                        <div className="text-[21px] leading-snug font-black text-nunu text-center tabular-nums">
+                          <p>스타트 시간 {startTime}</p>
+                          <p className="mt-1">아웃 시간 {selectedTime}</p>
                         </div>
                       </div>
                     )}
@@ -727,7 +970,7 @@ export default function GuestBookingFlow() {
               const list = serviceType === 'hair' ? hairStaff : makeupStaff
               const label = serviceType === 'hair' ? '✂️ 헤어 스텝' : '💄 메이크업 스텝'
               return (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2" style={{ order: 3 }}>
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</p>
                   {/* 랜덤 */}
                   <button onClick={() => setSelectedStaff(null)}
@@ -742,7 +985,10 @@ export default function GuestBookingFlow() {
                   {!selectedStaff && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
                       <span className="text-amber-500 text-sm">💡</span>
-                      <p className="text-xs text-amber-800 font-medium">랜덤 배정 시 <span className="font-bold">지정비 추가요금 없습니다.</span></p>
+                      <div className="text-xs text-amber-800 font-medium">
+                        <p>랜덤 배정 시 <span className="font-bold">지정비 추가요금 없습니다.</span></p>
+                        <p className="mt-1 text-amber-700">담당 스텝 지정 시 추가비가 발생됩니다.</p>
+                      </div>
                     </div>
                   )}
                   {list.map(s => (
@@ -767,7 +1013,7 @@ export default function GuestBookingFlow() {
             {serviceType === 'both' && (
               <div className="flex flex-col gap-5">
                 {/* 헤어 스텝 섹션 */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2" style={{ order: 3 }}>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">✂️ 헤어 스텝</span>
                     {selectedHairStaff && (
@@ -799,10 +1045,10 @@ export default function GuestBookingFlow() {
                 </div>
 
                 {/* 구분선 */}
-                <div className="border-t border-gray-100" />
+                <div className="border-t border-gray-100" style={{ order: 2 }} />
 
                 {/* 메이크업 스텝 섹션 */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2" style={{ order: 1 }}>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">💄 메이크업 스텝</span>
                     {selectedMakeupStaff && (
@@ -835,9 +1081,12 @@ export default function GuestBookingFlow() {
 
                 {/* 랜덤 안내 (둘 다 랜덤일 때) */}
                 {!selectedHairStaff && !selectedMakeupStaff && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-2" style={{ order: 4 }}>
                     <span className="text-amber-500 text-sm">💡</span>
-                    <p className="text-xs text-amber-800 font-medium">랜덤 배정 시 <span className="font-bold">지정비 추가요금 없습니다.</span></p>
+                    <div className="text-xs text-amber-800 font-medium">
+                      <p>랜덤 배정 시 <span className="font-bold">지정비 추가요금 없습니다.</span></p>
+                      <p className="mt-1 text-amber-700">담당 스텝 지정 시 추가비가 발생됩니다.</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -871,12 +1120,12 @@ export default function GuestBookingFlow() {
               {serviceType === 'both' ? (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">✂️ 헤어 스텝</span>
-                    <span className="font-medium">{selectedHairStaff ? `${selectedHairStaff.name} ${selectedHairStaff.title}` : '랜덤 배정'}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-gray-500">💄 메이크업 스텝</span>
                     <span className="font-medium">{selectedMakeupStaff ? `${selectedMakeupStaff.name} ${selectedMakeupStaff.title}` : '랜덤 배정'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">✂️ 헤어 스텝</span>
+                    <span className="font-medium">{selectedHairStaff ? `${selectedHairStaff.name} ${selectedHairStaff.title}` : '랜덤 배정'}</span>
                   </div>
                 </>
               ) : (

@@ -7,6 +7,37 @@ import { ko } from 'date-fns/locale'
 // ─────────────────────────────────────────
 // 관리자 고객 관리 (화면 F)
 // ─────────────────────────────────────────
+const SYSTEM_CUSTOMER_PHONE_PREFIXES = ['staff_auth:', 'staff_att:', 'staff_vis:', 'staff_profile:', 'audit_log', 'system:']
+const SYSTEM_CUSTOMER_NAME_PREFIXES = ['[스텝승인]', '[출퇴근]', '[노출설정]', '[스텝정보]', '[시스템]']
+const SYSTEM_CUSTOMER_MEMOS = [
+  'staff attendance system row',
+  'staff visibility system row',
+  'staff profile system row',
+  'audit log system row',
+  'system internal records anchor'
+]
+const SYSTEM_BOOKING_SERVICES = new Set([
+  'STAFF_AUTH',
+  'CUSTOMER_META',
+  'STAFF_ATTENDANCE',
+  'STAFF_VISIBILITY',
+  'STAFF_PROFILE',
+  'AUDIT_LOG'
+])
+
+function isSystemCustomer(customer) {
+  const phone = String(customer?.phone || '')
+  const name = String(customer?.name || '').trim()
+  const memo = String(customer?.memo || '').trim()
+  return SYSTEM_CUSTOMER_PHONE_PREFIXES.some(prefix => phone.startsWith(prefix)) ||
+    SYSTEM_CUSTOMER_NAME_PREFIXES.some(prefix => name.startsWith(prefix)) ||
+    SYSTEM_CUSTOMER_MEMOS.includes(memo)
+}
+
+function isSystemBooking(booking) {
+  return SYSTEM_BOOKING_SERVICES.has(booking?.service_detail)
+}
+
 export function AdminCustomers() {
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -28,17 +59,18 @@ export function AdminCustomers() {
       .order('created_at', { ascending: false })
 
     if (!customerData) { setLoading(false); return }
+    const visibleCustomerData = customerData.filter(c => !isSystemCustomer(c))
 
     // 예약 통계 조회
     const { data: bookingStats } = await supabase
       .from('bookings')
-      .select('customer_id, booking_date, status')
+      .select('customer_id, booking_date, status, service_detail')
       .in('status', ['confirmed', 'cancelled', 'rejected'])
       .order('booking_date', { ascending: false })
 
     // 고객별 통계 계산
     const statsMap = {}
-    ;(bookingStats || []).forEach(b => {
+    ;(bookingStats || []).filter(b => !isSystemBooking(b)).forEach(b => {
       if (!statsMap[b.customer_id]) {
         statsMap[b.customer_id] = { total: 0, confirmed: 0, lastVisit: null }
       }
@@ -51,7 +83,7 @@ export function AdminCustomers() {
       }
     })
 
-    const enriched = customerData.map(c => ({
+    const enriched = visibleCustomerData.map(c => ({
       ...c,
       stats: statsMap[c.id] || { total: 0, confirmed: 0, lastVisit: null }
     }))
@@ -67,7 +99,7 @@ export function AdminCustomers() {
       .eq('customer_id', customerId)
       .order('booking_date', { ascending: false })
       .limit(20)
-    setCustomerBookings(data || [])
+    setCustomerBookings((data || []).filter(b => !isSystemBooking(b)))
     setBookingsLoading(false)
   }
 
@@ -130,16 +162,16 @@ export function AdminCustomers() {
         ) : (
           filtered.map(c => (
             <button key={c.id} onClick={() => handleSelectCustomer(c)}
-              className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3 text-left hover:border-nunu/30 transition-all active:scale-98">
+              className="w-full bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 text-left hover:border-nunu/30 transition-all active:scale-98">
               {/* 아바타 */}
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-nunu to-nunu/70 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              <div className="w-11 h-11 rounded-full bg-apple-black flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                 {c.name?.[0] || '?'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-gray-900">{c.name}</p>
                   {c.stats.confirmed > 0 && (
-                    <span className="text-xs bg-gold/20 text-amber-800 px-1.5 py-0.5 rounded-full font-medium">
+                    <span className="text-xs bg-apple-parchment text-apple-blue px-1.5 py-0.5 rounded-full font-medium">
                       {c.stats.confirmed}회 방문
                     </span>
                   )}
@@ -178,7 +210,7 @@ export function AdminCustomers() {
             <div className="flex-shrink-0 px-5 py-3 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-nunu to-nunu/70 flex items-center justify-center text-white font-bold">
+                  <div className="w-12 h-12 rounded-full bg-apple-black flex items-center justify-center text-white font-semibold">
                     {selected.name?.[0]}
                   </div>
                   <div>

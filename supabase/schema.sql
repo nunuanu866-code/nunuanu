@@ -30,7 +30,7 @@ create table if not exists public.staff (
   email text,
   color text not null default '#888888',
   is_active boolean default true,
-  permission_level text not null default 'full' check (permission_level in ('full', 'view_only')),
+  permission_level text not null default 'view_only' check (permission_level in ('full', 'view_only')),
   created_at timestamptz default now()
 );
 
@@ -102,7 +102,7 @@ create table if not exists public.notifications (
   id uuid default uuid_generate_v4() primary key,
   booking_id uuid references public.bookings(id),
   recipient_phone text not null,
-  type text not null check (type in ('booking_request', 'booking_confirmed', 'booking_rejected', 'booking_cancelled')),
+  type text not null check (type in ('booking_request', 'booking_confirmed', 'booking_rejected', 'booking_cancelled', 'booking_cancel_requested', 'staff_approval_requested', 'staff_approval_confirmed')),
   status text not null default 'pending' check (status in ('pending', 'sent', 'failed')),
   sent_at timestamptz,
   created_at timestamptz default now()
@@ -135,6 +135,13 @@ alter table public.bookings enable row level security;
 alter table public.staff enable row level security;
 alter table public.time_blocks enable row level security;
 alter table public.notifications enable row level security;
+
+drop policy if exists "notifications_insert_app" on public.notifications;
+
+create policy "notifications_insert_app" on public.notifications
+  for insert
+  to anon, authenticated
+  with check (true);
 
 -- 고객: 자신의 데이터만 조회/수정
 create policy "customers_own" on public.customers

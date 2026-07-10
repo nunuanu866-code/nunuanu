@@ -16,9 +16,9 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-nunu border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-apple-parchment">
+        <div className="bg-white rounded-3xl px-8 py-7 flex flex-col items-center gap-3 border border-apple-hairline">
+          <div className="w-10 h-10 border-2 border-apple-hairline border-t-apple-blue rounded-full animate-spin" />
           <p className="text-sm text-gray-400">누누아누</p>
         </div>
       </div>

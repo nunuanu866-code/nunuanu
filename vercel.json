@@ -1,27 +1,17 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "index-customer.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/index-customer.html"
+      "source": "/booking",
+      "destination": "/index.html"
     },
     {
-      "src": "/customer.html",
-      "dest": "/index-customer.html"
+      "source": "/my",
+      "destination": "/index.html"
     },
     {
-      "src": "/admin.html",
-      "dest": "/admin.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index-customer.html"
+      "source": "/admin-login",
+      "destination": "/index.html"
     }
   ],
   "headers": [

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, statusLabel, serviceLabel, SALON_PHONE } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -6,14 +6,19 @@ import { Button, Badge, Card, EmptyState, LoadingSpinner } from '../../component
 import { format, differenceInHours } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+import { adminDeletedOf, cancelRequestOf, plainBookingMemo, withCancelRequest } from '../../lib/bookingMeta'
+import { createAppNotification } from '../../lib/notifications'
+import { disableCustomerPush, enableCustomerPush, getCustomerPushDevice } from '../../lib/customerPush'
 
-const statusColors = { pending: 'amber', confirmed: 'green', rejected: 'red', cancelled: 'gray' }
+const statusColors = { pending: 'amber', confirmed: 'green', rejected: 'red', cancelled: 'gray', cancel_requested: 'amber' }
 
 // ─────────────────────────────────────────
 // 예약 카드 (공통)
 // ─────────────────────────────────────────
 export function BookingCard({ booking, onClick }) {
   const dateObj = new Date(booking.booking_date + 'T' + booking.start_time)
+  const cancelRequest = cancelRequestOf(booking)
+  const memo = plainBookingMemo(booking)
   return (
     <Card onClick={onClick} className="flex flex-col gap-2">
       <div className="flex items-start justify-between">
@@ -23,9 +28,12 @@ export function BookingCard({ booking, onClick }) {
             {format(dateObj, 'M월 d일 (E)', { locale: ko })} · {booking.start_time?.slice(0,5)} ~ {booking.end_time?.slice(0,5)}
           </p>
         </div>
-        <Badge color={statusColors[booking.status]}>{statusLabel[booking.status]}</Badge>
+        <Badge color={statusColors[cancelRequest ? 'cancel_requested' : booking.status]}>
+          {cancelRequest ? '취소 요청중' : statusLabel[booking.status]}
+        </Badge>
       </div>
       {booking.service_detail && <p className="text-sm text-gray-400">{booking.service_detail}</p>}
+      {memo && <p className="text-sm text-gray-400">{memo}</p>}
     </Card>
   )
 }
@@ -46,6 +54,11 @@ export function GuestMyBookings() {
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState(null)
   const [pinError, setPinError] = useState(false)
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const seenBookingStateRef = useRef(new Map())
+  const didInitBookingStateRef = useRef(false)
 
   function formatPhone(raw) {
     const d = raw.replace(/\D/g, '').slice(0, 11)
@@ -57,6 +70,81 @@ export function GuestMyBookings() {
   function normalizePhone(raw) {
     const d = raw.replace(/\D/g, '')
     return d.startsWith('0') ? '+82' + d.slice(1) : '+82' + d
+  }
+
+  useEffect(() => {
+    setPushEnabled(!!getCustomerPushDevice(phone))
+  }, [phone, queryStep])
+
+  async function toggleReservationPush() {
+    if (pushBusy) return
+    setPushBusy(true)
+    try {
+      if (pushEnabled) {
+        await disableCustomerPush(phone)
+        setPushEnabled(false)
+        toast.success('예약 알림이 꺼졌습니다')
+      } else {
+        await enableCustomerPush(phone)
+        setPushEnabled(true)
+        toast.success('예약 확정/거절 알림이 켜졌습니다')
+      }
+    } catch (error) {
+      toast.error(error?.message || '알림 설정에 실패했습니다')
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  function monthKey(date) {
+    return String(date || '').slice(0, 7)
+  }
+
+  function monthLabel(key) {
+    if (!key || key === 'all') return '전체'
+    const [year, month] = key.split('-')
+    return `${year}년 ${Number(month)}월`
+  }
+
+  async function loadBookingsForCustomer(customerId, showLoading = false) {
+    if (!customerId) return false
+    if (showLoading) setLoading(true)
+    try {
+      const { data } = await supabase
+        .from('bookings')
+        .select('*, requested_staff:requested_staff_id(name, color, role)')
+        .eq('customer_id', customerId)
+        .order('booking_date', { ascending: false })
+        .limit(500)
+      const rows = (data || []).filter(b => !adminDeletedOf(b))
+      if (queryStep === 'results') {
+        const nextState = new Map()
+        rows.forEach(b => {
+          const state = `${b.status}:${cancelRequestOf(b)?.status || ''}`
+          nextState.set(b.id, state)
+          const prev = seenBookingStateRef.current.get(b.id)
+          if (didInitBookingStateRef.current && prev && prev !== state) {
+            if (b.status === 'confirmed') toast.success('예약이 확정되었습니다')
+            if (b.status === 'cancelled') toast.success('취소가 확정되었습니다')
+          }
+        })
+        seenBookingStateRef.current = nextState
+        didInitBookingStateRef.current = true
+      }
+      setBookings(rows)
+      setSelectedMonth(prev => {
+        const months = [...new Set(rows.map(b => monthKey(b.booking_date)).filter(Boolean))]
+        if (!months.length) return ''
+        return prev && (prev === 'all' || months.includes(prev)) ? prev : months[0]
+      })
+      setSelected(prev => prev ? rows.find(b => b.id === prev.id) || null : prev)
+      return true
+    } catch {
+      if (showLoading) toast.error('예약 조회에 실패했습니다')
+      return false
+    } finally {
+      if (showLoading) setLoading(false)
+    }
   }
 
   // STEP 1: 전화번호로 고객 찾기
@@ -93,22 +181,25 @@ export function GuestMyBookings() {
     }
 
     // PIN 없는 고객(구버전)은 그냥 통과
-    setLoading(true)
-    try {
-      const { data } = await supabase
-        .from('bookings')
-        .select('*, requested_staff:requested_staff_id(name, color, role)')
-        .eq('customer_id', foundCustomer.id)
-        .order('booking_date', { ascending: false })
-        .limit(30)
-      setBookings(data || [])
+    const ok = await loadBookingsForCustomer(foundCustomer.id, true)
+    if (ok) {
       setQueryStep('results')
-    } catch {
-      toast.error('예약 조회에 실패했습니다')
-    } finally {
-      setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (queryStep !== 'results' || !foundCustomer?.id) return
+    const reload = () => loadBookingsForCustomer(foundCustomer.id, false)
+    const channel = supabase
+      .channel(`guest-my-bookings-live-${foundCustomer.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `customer_id=eq.${foundCustomer.id}` }, reload)
+      .subscribe()
+    const timer = setInterval(reload, 5000)
+    return () => {
+      clearInterval(timer)
+      supabase.removeChannel(channel)
+    }
+  }, [queryStep, foundCustomer?.id])
 
   function reset() {
     setQueryStep('phone')
@@ -116,8 +207,11 @@ export function GuestMyBookings() {
     setPinInput('')
     setFoundCustomer(null)
     setBookings([])
+    setSelectedMonth('')
     setPinError(false)
     setSelected(null)
+    seenBookingStateRef.current = new Map()
+    didInitBookingStateRef.current = false
   }
 
   async function cancelBooking(id) {
@@ -129,15 +223,52 @@ export function GuestMyBookings() {
       toast.error(`예약 24시간 이내는 직접 연락해 주세요\n📞 ${SALON_PHONE}`, { duration: 4000 })
       return
     }
-    if (!window.confirm('예약을 취소하시겠습니까?')) return
+    if (booking.status === 'confirmed') {
+      if (cancelRequestOf(booking)) {
+        toast('이미 취소 요청이 접수되었습니다')
+        return
+      }
+      if (!window.confirm('관리자에게 취소 요청을 보내시겠습니까?')) return
+      const nextMemo = withCancelRequest(booking.customer_memo, {
+        requested_by: 'customer',
+        phone: normalizePhone(phone),
+      })
+      const { error } = await supabase
+        .from('bookings')
+        .update({ customer_memo: nextMemo })
+        .eq('id', id)
+      if (!error) {
+        await createAppNotification({
+          bookingId: id,
+          phone: normalizePhone(phone),
+          type: 'booking_cancel_requested',
+        })
+        const updated = { ...booking, customer_memo: nextMemo }
+        setBookings(prev => prev.map(b => b.id === id ? updated : b))
+        setSelected(updated)
+        toast.success('취소 요청이 관리자에게 전송되었습니다')
+      } else {
+        toast.error('취소 요청에 실패했습니다. 다시 시도해주세요')
+      }
+      return
+    }
+
+    if (!window.confirm('예약 요청을 취소하시겠습니까?')) return
     const { error } = await supabase
       .from('bookings')
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
       .eq('id', id)
     if (!error) {
+      await createAppNotification({
+        bookingId: id,
+        phone: normalizePhone(phone),
+        type: 'booking_cancelled',
+      })
       setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b))
       setSelected(null)
-      toast.success('예약이 취소되었습니다')
+      toast.success('예약 요청이 취소되었습니다')
+    } else {
+      toast.error('취소에 실패했습니다. 다시 시도해주세요')
     }
   }
 
@@ -155,6 +286,15 @@ export function GuestMyBookings() {
       verifyPinAndLoad(full.trim())
     }
   }
+
+  const monthOptions = useMemo(() => {
+    return [...new Set(bookings.map(b => monthKey(b.booking_date)).filter(Boolean))]
+  }, [bookings])
+
+  const filteredBookings = useMemo(() => {
+    if (!selectedMonth || selectedMonth === 'all') return bookings
+    return bookings.filter(b => monthKey(b.booking_date) === selectedMonth)
+  }, [bookings, selectedMonth])
 
   return (
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
@@ -235,8 +375,8 @@ export function GuestMyBookings() {
                     }}
                     className="w-16 h-16 text-center text-3xl font-bold border-2 rounded-2xl outline-none transition-all"
                     style={{
-                      borderColor: pinError ? '#DC2626' : pinInput[i] ? '#1A1A2E' : '#e5e7eb',
-                      background: pinError ? '#FEF2F2' : 'white'
+                      borderColor: pinError ? '#DC2626' : pinInput[i] ? '#0066cc' : '#e0e0e0',
+                      background: pinError ? '#FEF2F2' : pinInput[i] ? '#f5f5f7' : 'white'
                     }}
                     autoFocus={i === 0}
                   />
@@ -277,15 +417,69 @@ export function GuestMyBookings() {
                 다시 조회
               </button>
             </div>
+            <button
+              type="button"
+              onClick={toggleReservationPush}
+              disabled={pushBusy}
+              className={`w-full rounded-2xl py-3 font-bold text-sm transition-all ${
+                pushEnabled
+                  ? 'bg-white text-gray-700 border border-gray-300 active:bg-gray-50'
+                  : 'bg-gray-900 text-white active:scale-98 shadow-sm shadow-gray-900/10'
+              } disabled:opacity-80`}
+            >
+              {pushBusy ? (pushEnabled ? '알림 끄는 중...' : '알림 설정 중...') : pushEnabled ? '예약 알림 끄기' : '예약 확정/거절 알림 켜기'}
+            </button>
             {loading ? (
               <LoadingSpinner />
             ) : bookings.length === 0 ? (
               <EmptyState icon="📋" title="예약 내역이 없습니다" description="아직 예약 내역이 없습니다" />
             ) : (
               <div className="flex flex-col gap-3">
-                {bookings.map(b => (
-                  <BookingCard key={b.id} booking={b} onClick={() => setSelected(b)} />
-                ))}
+                <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-gray-500">월별 보기</p>
+                    <p className="text-xs text-gray-400">
+                      {selectedMonth && selectedMonth !== 'all'
+                        ? `${monthLabel(selectedMonth)} ${filteredBookings.length}건`
+                        : `전체 ${filteredBookings.length}건`}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMonth('all')}
+                      className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
+                        selectedMonth === 'all'
+                          ? 'bg-nunu text-white border-nunu'
+                          : 'bg-white text-gray-600 border-gray-200'
+                      }`}
+                    >
+                      전체
+                    </button>
+                    {monthOptions.map(month => (
+                      <button
+                        key={month}
+                        type="button"
+                        onClick={() => setSelectedMonth(month)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
+                          selectedMonth === month
+                            ? 'bg-nunu text-white border-nunu'
+                            : 'bg-white text-gray-600 border-gray-200'
+                        }`}
+                      >
+                        {monthLabel(month)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {filteredBookings.length === 0 ? (
+                  <EmptyState icon="📋" title="해당 월 예약 내역이 없습니다" description="다른 월을 선택해 주세요" />
+                ) : (
+                  filteredBookings.map(b => (
+                    <BookingCard key={b.id} booking={b} onClick={() => setSelected(b)} />
+                  ))
+                )}
               </div>
             )}
           </>
@@ -297,7 +491,9 @@ export function GuestMyBookings() {
       {selected && (() => {
         const bookingDateTime = new Date(`${selected.booking_date}T${selected.start_time}`)
         const diffHours = differenceInHours(bookingDateTime, new Date())
-        const canCancel = ['pending', 'confirmed'].includes(selected.status) && diffHours >= 24
+        const cancelRequest = cancelRequestOf(selected)
+        const selectedMemo = plainBookingMemo(selected)
+        const canCancel = ['pending', 'confirmed'].includes(selected.status) && !cancelRequest && diffHours >= 24
 
         return (
           <div className="fixed inset-0 z-50 flex flex-col justify-end">
@@ -313,12 +509,20 @@ export function GuestMyBookings() {
                 <div className="flex justify-between"><span className="text-gray-500">시간</span><span className="font-medium">{selected.start_time?.slice(0,5)} ~ {selected.end_time?.slice(0,5)}</span></div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">상태</span>
-                  <Badge color={statusColors[selected.status]}>{statusLabel[selected.status]}</Badge>
+                  <Badge color={statusColors[cancelRequest ? 'cancel_requested' : selected.status]}>
+                    {cancelRequest ? '취소 요청중' : statusLabel[selected.status]}
+                  </Badge>
                 </div>
                 {selected.service_detail && <div className="flex justify-between"><span className="text-gray-500">시술 내용</span><span>{selected.service_detail}</span></div>}
-                {selected.customer_memo && <div className="flex justify-between"><span className="text-gray-500">요청사항</span><span className="text-right max-w-[60%]">{selected.customer_memo}</span></div>}
+                {selectedMemo && <div className="flex justify-between"><span className="text-gray-500">요청사항</span><span className="text-right max-w-[60%]">{selectedMemo}</span></div>}
                 {selected.requested_staff && <div className="flex justify-between"><span className="text-gray-500">담당</span><span>{selected.requested_staff.name} {selected.requested_staff.title || ''}</span></div>}
               </div>
+              {cancelRequest && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <p className="text-sm text-amber-800 font-medium">관리자 취소 승인 대기 중입니다</p>
+                  <p className="text-xs text-amber-700 mt-1">승인되면 예약 상태가 취소로 변경됩니다.</p>
+                </div>
+              )}
               {['pending', 'confirmed'].includes(selected.status) && diffHours < 24 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                   <p className="text-sm text-amber-800 font-medium">예약 24시간 이내입니다</p>
@@ -326,7 +530,9 @@ export function GuestMyBookings() {
                 </div>
               )}
               {canCancel && (
-                <Button variant="danger" onClick={() => cancelBooking(selected.id)}>예약 취소</Button>
+                <Button variant="danger" onClick={() => cancelBooking(selected.id)}>
+                  {selected.status === 'confirmed' ? '취소 요청' : '예약 요청 취소'}
+                </Button>
               )}
             </div>
           </div>

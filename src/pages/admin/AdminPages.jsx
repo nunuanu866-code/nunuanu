@@ -6,6 +6,19 @@ import { format, addDays, subDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
+const SYSTEM_BOOKING_SERVICES = new Set([
+  'STAFF_AUTH',
+  'CUSTOMER_META',
+  'STAFF_ATTENDANCE',
+  'STAFF_VISIBILITY',
+  'STAFF_PROFILE',
+  'AUDIT_LOG'
+])
+
+function isSystemBooking(booking) {
+  return SYSTEM_BOOKING_SERVICES.has(booking?.service_detail)
+}
+
 // ─────────────────────────────────────────
 // 관리자 예약 요청 수신함
 // ─────────────────────────────────────────
@@ -36,7 +49,7 @@ export function AdminInbox() {
       .order('status', { ascending: true }) // pending 먼저
       .order('booking_date', { ascending: true })
       .order('start_time', { ascending: true })
-    setBookings(data || [])
+    setBookings((data || []).filter(b => !isSystemBooking(b)))
     setLoading(false)
   }
 
@@ -334,7 +347,7 @@ export function AdminSchedule() {
       .select('*, customers(name, phone), requested_staff:requested_staff_id(name, color)')
       .eq('booking_date', date)
       .in('status', ['pending', 'confirmed'])
-      .then(({ data }) => { setBookings(data || []); setLoading(false) })
+      .then(({ data }) => { setBookings((data || []).filter(b => !isSystemBooking(b))); setLoading(false) })
   }, [date])
 
   function timeToRelMin(t) {
@@ -388,7 +401,7 @@ export function AdminSchedule() {
         .select('*, customers(name, phone), requested_staff:requested_staff_id(name, color)')
         .eq('booking_date', date)
         .in('status', ['pending', 'confirmed'])
-      setBookings(data || [])
+      setBookings((data || []).filter(b => !isSystemBooking(b)))
     } catch {
       toast.error('수정에 실패했습니다')
     } finally {

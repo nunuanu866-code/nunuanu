@@ -93,9 +93,10 @@ const ADMIN_EMAILS = {
 
       // DB에서 찾음
       if (staffData) {
+        const staffPermission = (staffData.permission_level === 'full' || staffData.is_admin) ? 'full' : 'view_only'
         setStaffProfile(staffData)
-        setPermission(staffData.permission_level || 'full')
-        setRole(staffData.is_admin ? 'admin' : 'staff')
+        setPermission(staffPermission)
+        setRole(staffPermission === 'full' ? 'admin' : 'staff')
         return
       }
 
