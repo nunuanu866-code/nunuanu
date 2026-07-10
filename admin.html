@@ -125,7 +125,7 @@ console.warn = function(...args) {
   originalWarn.apply(console, args);
 };
 
-window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-add-customer-keyboard-safe';
+window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-customer-search-dock';
 console.log('누누아누 관리자 v2.0.0-FINAL-20260703-CUSTOMER-NO-DETAIL');
 console.log('React loaded:', typeof React !== 'undefined');
 console.log('ReactDOM loaded:', typeof ReactDOM !== 'undefined');
@@ -1609,14 +1609,17 @@ function SBtn({children,onClick,flex=1,disabled=false,danger=false}){return <but
 
 
 function useVisualViewportFrame(){
+  const baseHeightRef=useRef(0);
   const readFrame=()=>{
     if(typeof window==='undefined')return{height:0,bottomInset:0};
     const vv=window.visualViewport;
-    const layoutHeight=window.innerHeight||0;
-    if(!vv)return{height:layoutHeight,bottomInset:0};
-    const height=Math.round(vv.height||layoutHeight);
-    const bottomInset=Math.max(0,Math.round(layoutHeight-(vv.height||layoutHeight)-(vv.offsetTop||0)));
-    return{height,bottomInset};
+    const currentLayoutHeight=window.innerHeight||0;
+    const currentVisualHeight=Math.round(vv?.height||currentLayoutHeight||0);
+    baseHeightRef.current=Math.max(baseHeightRef.current,currentLayoutHeight,currentVisualHeight);
+    const baseHeight=baseHeightRef.current||currentLayoutHeight||currentVisualHeight;
+    const offsetTop=Math.round(vv?.offsetTop||0);
+    const bottomInset=Math.max(0,Math.round(baseHeight-currentVisualHeight-offsetTop));
+    return{height:currentVisualHeight||currentLayoutHeight,bottomInset};
   };
   const[frame,setFrame]=useState(readFrame);
   useEffect(()=>{
@@ -1631,18 +1634,17 @@ function useVisualViewportFrame(){
     vv?.addEventListener('resize',update);
     vv?.addEventListener('scroll',update);
     window.addEventListener('resize',update);
-    window.addEventListener('orientationchange',update);
+    window.addEventListener('orientationchange',resetBase);
     return()=>{
       cancelAnimationFrame(raf);
       vv?.removeEventListener('resize',update);
       vv?.removeEventListener('scroll',update);
       window.removeEventListener('resize',update);
-      window.removeEventListener('orientationchange',update);
+      window.removeEventListener('orientationchange',resetBase);
     };
   },[]);
   return frame;
 }
-
 function Sheet({children,onClose,step,totalSteps,onBack}){
   const viewportFrame=useVisualViewportFrame();
   const keyboardInset=viewportFrame.bottomInset>48?viewportFrame.bottomInset:0;
@@ -3083,11 +3085,38 @@ function S1Date({draft,set,onNext,onClose,supaCustomers,onCustomerSelect}){
 function S2Customer({draft,set,onNext,onBack,onClose,customers}){
   const q=(draft.name||'').trim();
   const inputRef=useRef(null);
+  const dockInputRef=useRef(null);
   const searchWrapRef=useRef(null);
   const viewportFrame=useVisualViewportFrame();
   const[showAutocomplete,setShowAutocomplete]=useState(false);
   const[focusedIndex,setFocusedIndex]=useState(-1);
-  const autocompleteMaxHeight=Math.max(132,Math.min(238,Math.round((viewportFrame.height||window.innerHeight||640)*0.34)));
+  const[dockSearchOpen,setDockSearchOpen]=useState(false);
+  const[dockSearchEnabled,setDockSearchEnabled]=useState(false);
+  useEffect(()=>{
+    if(typeof window==='undefined')return;
+    const mq=window.matchMedia('(max-width: 768px), (pointer: coarse)');
+    const update=()=>setDockSearchEnabled(!!mq.matches);
+    update();
+    mq.addEventListener?.('change',update);
+    window.addEventListener('resize',update);
+    return()=>{mq.removeEventListener?.('change',update);window.removeEventListener('resize',update);};
+  },[]);
+  const matches=useMemo(()=>{
+    if(!q)return[];
+    const qLower=q.toLowerCase();
+    const qPhone=q.replace(/\D/g,'');
+    return customers.filter(c=>{
+      const name=String(c.name||'').toLowerCase();
+      const phone=String(c.phone||'').replace(/\D/g,'');
+      return name.includes(qLower)||(qPhone&&phone.includes(qPhone));
+    }).slice(0,6);
+  },[q,customers]);
+  const viewportH=viewportFrame.height||(typeof window!=='undefined'?window.innerHeight:640)||640;
+  const autocompleteMaxHeight=Math.max(126,Math.min(238,Math.round(viewportH*0.3)));
+  const dockListMaxHeight=Math.max(118,Math.min(250,Math.round(viewportH*0.28)));
+  const dockBottom=viewportFrame.bottomInset>48?`${viewportFrame.bottomInset+8}px`:'max(10px, calc(100vh - 100dvh + env(safe-area-inset-bottom, 0px)))';
+  const enabled=!!draft.customer||q.length>=1;
+  const focusDockInput=()=>requestAnimationFrame(()=>dockInputRef.current?.focus?.({preventScroll:true}));
   const keepCustomerSearchVisible=()=>{
     requestAnimationFrame(()=>{
       const wrap=searchWrapRef.current;
@@ -3100,37 +3129,49 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
       else if(needBottom>sr.bottom)scroller.scrollTop+=needBottom-sr.bottom;
     });
   };
-  useEffect(()=>{const timer=setTimeout(()=>{inputRef.current?.focus?.({preventScroll:true});keepCustomerSearchVisible();},260);return()=>clearTimeout(timer);},[]);
-  const matches=useMemo(()=>{
-    if(!q)return[];
-    const qLower=q.toLowerCase();
-    const qPhone=q.replace(/\D/g,'');
-    return customers.filter(c=>{
-      const name=String(c.name||'').toLowerCase();
-      const phone=String(c.phone||'').replace(/\D/g,'');
-      return name.includes(qLower)||(qPhone&&phone.includes(qPhone));
-    }).slice(0,5);
-  },[q,customers]);
-  useEffect(()=>{if(showAutocomplete)keepCustomerSearchVisible();},[showAutocomplete,matches.length,autocompleteMaxHeight]);
-  const enabled=!!draft.customer||q.length>=1;
+  const openSearchDock=()=>{
+    if(!dockSearchEnabled){keepCustomerSearchVisible();return;}
+    setDockSearchOpen(true);
+    setShowAutocomplete(q.length>0);
+    setFocusedIndex(-1);
+    focusDockInput();
+  };
+  const closeSearchDock=()=>{
+    setDockSearchOpen(false);
+    setShowAutocomplete(false);
+    setFocusedIndex(-1);
+    dockInputRef.current?.blur?.();
+    inputRef.current?.blur?.();
+  };
   const pickCustomer=(customer)=>{
     set({...draft,customer,name:customer.name||''});
     setShowAutocomplete(false);
     setFocusedIndex(-1);
+    setDockSearchOpen(false);
     inputRef.current?.blur?.();
+    dockInputRef.current?.blur?.();
   };
   const clearCustomerSearch=()=>{
     set({...draft,name:'',customer:null});
     setShowAutocomplete(false);
     setFocusedIndex(-1);
-    setTimeout(()=>{inputRef.current?.focus?.({preventScroll:true});keepCustomerSearchVisible();},0);
+    setTimeout(()=>{
+      if(dockSearchOpen||dockSearchEnabled){setDockSearchOpen(true);focusDockInput();}
+      else{inputRef.current?.focus?.({preventScroll:true});keepCustomerSearchVisible();}
+    },0);
   };
   const handleInputChange=(e)=>{
-    set({...draft,name:e.target.value,customer:null});
-    setShowAutocomplete(e.target.value.trim().length>0);
+    const value=e.target.value;
+    set({...draft,name:value,customer:null});
+    setShowAutocomplete(value.trim().length>0);
     setFocusedIndex(-1);
   };
   const handleKeyDown=(e)=>{
+    if(e.key==='Enter'){
+      if(showAutocomplete&&matches.length>0&&focusedIndex>=0){e.preventDefault();pickCustomer(matches[focusedIndex]);}
+      else if(dockSearchOpen){dockInputRef.current?.blur?.();}
+      return;
+    }
     if(!showAutocomplete||matches.length===0)return;
     if(e.key==='ArrowDown'){
       e.preventDefault();
@@ -3138,66 +3179,89 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
     }else if(e.key==='ArrowUp'){
       e.preventDefault();
       setFocusedIndex(prev=>prev>0?prev-1:matches.length-1);
-    }else if(e.key==='Enter'){
-      e.preventDefault();
-      pickCustomer(matches[Math.max(0,focusedIndex)]);
     }else if(e.key==='Escape'){
-      setShowAutocomplete(false);
-      setFocusedIndex(-1);
+      closeSearchDock();
     }
   };
   const handleBlur=()=>setTimeout(()=>setShowAutocomplete(false),180);
-  const handleNext=()=>{if(!draft.customer&&q)set({...draft,customer:{name:q,phone:'',visits:0,color:'sky',isNew:true}});onNext();};
+  const handleNext=()=>{if(!draft.customer&&q)set({...draft,customer:{name:q,phone:'',visits:0,color:'sky',isNew:true}});closeSearchDock();onNext();};
+  useEffect(()=>{
+    const timer=setTimeout(()=>{
+      if(dockSearchEnabled){setDockSearchOpen(true);focusDockInput();}
+      else{inputRef.current?.focus?.({preventScroll:true});keepCustomerSearchVisible();}
+    },260);
+    return()=>clearTimeout(timer);
+  },[dockSearchEnabled]);
+  useEffect(()=>{if(showAutocomplete&&!dockSearchOpen)keepCustomerSearchVisible();},[showAutocomplete,matches.length,autocompleteMaxHeight,dockSearchOpen]);
+  const suggestionRows=matches.length>0?matches.map((m,i)=>
+    <button
+      key={m.id||`${m.name}-${m.phone}-${i}`}
+      type="button"
+      onPointerDown={e=>e.preventDefault()}
+      onMouseDown={e=>e.preventDefault()}
+      onClick={()=>pickCustomer(m)}
+      onMouseEnter={()=>setFocusedIndex(i)}
+      style={{width:'100%',padding:'11px 13px',border:'none',background:focusedIndex===i?'#F3F4F6':T.surface,textAlign:'left',cursor:'pointer',borderBottom:i<matches.length-1?`1px solid ${T.line2}`:'none',display:'flex',alignItems:'center',gap:10}}>
+      <div style={{width:32,height:32,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:900,flexShrink:0}}>{m.name?.[0]||'?'}</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div className="nui-card-text" style={{fontSize:14,fontWeight:800,color:T.ink}}>{m.name}</div>
+        <div className="nui-card-text" style={{fontSize:11,color:T.ink2,marginTop:1}}>{m.phone||'연락처 없음'} · 방문 {m.visits||0}회</div>
+        {m.memo&&<div className="nui-card-text" style={{fontSize:10,color:T.ink3,marginTop:2}}>메모: {m.memo}</div>}
+      </div>
+    </button>
+  ):<div style={{padding:14,fontSize:13,fontWeight:700,color:T.ink2,textAlign:'center'}}>일치하는 고객 없음</div>;
   return <Sheet onClose={onClose} step={2} totalSteps={4} onBack={onBack}>
     <STitle title="누가 오시나요?" sub="이름이나 번호로 검색"/>
     <SBody>
       <div ref={searchWrapRef} style={{position:'relative',marginBottom:12,zIndex:20,scrollMarginTop:12,scrollMarginBottom:260}}>
-        <div style={{height:52,display:'flex',alignItems:'center',gap:10,padding:'0 14px',borderRadius:14,border:`1.5px solid ${draft.name?T.ink:T.line}`,background:T.surface}}>
+        <div
+          onPointerDown={dockSearchEnabled?e=>{e.preventDefault();openSearchDock();}:undefined}
+          style={{height:52,display:'flex',alignItems:'center',gap:10,padding:'0 14px',borderRadius:14,border:`1.5px solid ${draft.name?T.ink:T.line}`,background:T.surface}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.ink3} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input ref={inputRef} type="search" enterKeyHint="search" autoCapitalize="off" value={draft.name} onChange={handleInputChange} onKeyDown={handleKeyDown} onFocus={()=>{if(q)setShowAutocomplete(true);keepCustomerSearchVisible();}} onBlur={handleBlur} placeholder="이름 또는 전화번호" autoComplete="off" style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:16,color:T.ink,fontWeight:500,minWidth:0}}/>
+          <input ref={inputRef} readOnly={dockSearchEnabled} type="search" enterKeyHint="search" autoCapitalize="off" value={draft.name} onChange={handleInputChange} onKeyDown={handleKeyDown} onFocus={()=>dockSearchEnabled?openSearchDock():(q&&setShowAutocomplete(true),keepCustomerSearchVisible())} onBlur={dockSearchEnabled?undefined:handleBlur} placeholder="이름 또는 전화번호" autoComplete="off" style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:16,color:T.ink,fontWeight:500,minWidth:0}}/>
           {draft.name&&<button type="button" onMouseDown={e=>e.preventDefault()} onClick={clearCustomerSearch} style={{width:22,height:22,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:11,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>}
         </div>
-        {showAutocomplete&&matches.length>0&&<div style={{position:'absolute',top:'calc(100% + 6px)',left:0,right:0,background:'#fff',border:`1px solid ${T.line}`,borderRadius:14,boxShadow:'0 8px 22px rgba(0,0,0,.14)',zIndex:40,maxHeight:autocompleteMaxHeight,overflowY:'auto',overscrollBehaviorY:'contain',WebkitOverflowScrolling:'touch'}}>
-          {matches.map((m,i)=><button
-            key={m.id||`${m.name}-${m.phone}-${i}`}
-            type="button"
-            onMouseDown={e=>e.preventDefault()}
-            onClick={()=>pickCustomer(m)}
-            onMouseEnter={()=>setFocusedIndex(i)}
-            style={{width:'100%',padding:'11px 13px',border:'none',background:focusedIndex===i?'#F3F4F6':T.surface,textAlign:'left',cursor:'pointer',borderBottom:i<matches.length-1?`1px solid ${T.line2}`:'none',display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:32,height:32,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:900,flexShrink:0}}>{m.name?.[0]||'?'}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div className="nui-card-text" style={{fontSize:14,fontWeight:800,color:T.ink}}>{m.name}</div>
-              <div className="nui-card-text" style={{fontSize:11,color:T.ink2,marginTop:1}}>{m.phone||'연락처 없음'} · 방문 {m.visits||0}회</div>
-              {m.memo&&<div className="nui-card-text" style={{fontSize:10,color:T.ink3,marginTop:2}}>메모: {m.memo}</div>}
-            </div>
-          </button>)}
+        {!dockSearchEnabled&&showAutocomplete&&matches.length>0&&<div style={{position:'absolute',top:'calc(100% + 6px)',left:0,right:0,background:'#fff',border:`1px solid ${T.line}`,borderRadius:14,boxShadow:'0 8px 22px rgba(0,0,0,.14)',zIndex:40,maxHeight:autocompleteMaxHeight,overflowY:'auto',overscrollBehaviorY:'contain',WebkitOverflowScrolling:'touch'}}>
+          {suggestionRows}
         </div>}
       </div>
-      {q?<div style={{borderRadius:14,overflow:'hidden',border:`1px solid ${T.line}`}}>
+      {q&&!(dockSearchEnabled&&dockSearchOpen)?<div style={{borderRadius:14,overflow:'hidden',border:`1px solid ${T.line}`}}>
         {matches.length===0?<div style={{padding:16,fontSize:13,color:T.ink2,textAlign:'center'}}>일치하는 고객 없음</div>
         :matches.map((m,i)=>{const sel=draft.customer?.name===m.name;return <button key={m.id||m.name} onClick={()=>pickCustomer(m)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',width:'100%',textAlign:'left',border:'none',background:sel?T.line2:T.surface,borderBottom:i<matches.length-1?`1px solid ${T.line2}`:'none',cursor:'pointer'}}>
-          <div style={{width:36,height:36,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,flexShrink:0}}>{m.name[0]}</div>
-          <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{m.name}</div><div style={{fontSize:12,color:T.ink2,marginTop:1}}>{m.phone} · 방문 {m.visits}회</div></div>
-          {m.visits>=5&&<Chip color="accent" size="xs">?④낏</Chip>}
+          <div style={{width:36,height:36,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,flexShrink:0}}>{m.name?.[0]||'?'}</div>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:15,fontWeight:700}}>{m.name}</div><div style={{fontSize:12,color:T.ink2,marginTop:1}}>{m.phone} · 방문 {m.visits}회</div></div>
+          {m.visits>=5&&<Chip color="accent" size="xs">단골</Chip>}
           {sel&&<div style={{width:20,height:20,borderRadius:'50%',background:T.success,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</div>}
         </button>;})}
-      </div>:<div>
+      </div>:!q?<div>
         <div style={{fontSize:12,fontWeight:700,color:T.ink2,marginBottom:8}}>최근 방문</div>
         <div style={{borderRadius:14,overflow:'hidden',border:`1px solid ${T.line}`}}>
           {customers.slice(0,4).map((m,i)=><button key={m.id||m.name} onClick={()=>pickCustomer(m)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',width:'100%',textAlign:'left',border:'none',background:T.surface,borderBottom:i<3?`1px solid ${T.line2}`:'none',cursor:'pointer'}}>
-            <div style={{width:36,height:36,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800}}>{m.name[0]}</div>
-            <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{m.name}</div><div style={{fontSize:12,color:T.ink2,marginTop:1}}>방문 {m.visits}회</div></div>
-            {m.visits>=5&&<Chip color="accent" size="xs">?④낏</Chip>}
+            <div style={{width:36,height:36,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800}}>{m.name?.[0]||'?'}</div>
+            <div style={{flex:1,minWidth:0}}><div style={{fontSize:15,fontWeight:700}}>{m.name}</div><div style={{fontSize:12,color:T.ink2,marginTop:1}}>방문 {m.visits}회</div></div>
+            {m.visits>=5&&<Chip color="accent" size="xs">단골</Chip>}
             <span style={{fontSize:16,color:T.ink3}}>›</span>
           </button>)}
         </div>
-      </div>}
+      </div>:<div style={{padding:'14px 8px',fontSize:12,fontWeight:700,color:T.ink3,textAlign:'center'}}>키패드 위 검색창에서 고객을 선택하세요.</div>}
     </SBody>
     <SFoot><PBtn disabled={!enabled} onClick={handleNext}>{draft.customer?'다음':q?`"${q}" 신규 등록 후 다음`:'다음'}</PBtn></SFoot>
+    {dockSearchEnabled&&dockSearchOpen&&<div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',left:12,right:12,bottom:dockBottom,zIndex:80,background:T.surface,border:`1px solid ${T.line}`,borderRadius:22,boxShadow:'0 18px 55px rgba(0,0,0,.24)',padding:10,maxHeight:'min(390px, calc(100dvh - 24px))',display:'flex',flexDirection:'column',gap:8,overflow:'hidden'}}>
+      <div style={{height:50,display:'flex',alignItems:'center',gap:10,padding:'0 12px',borderRadius:16,border:`1.5px solid ${T.ink}`,background:T.surface,flexShrink:0}}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={T.ink3} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input ref={dockInputRef} type="search" enterKeyHint="search" autoCapitalize="off" value={draft.name} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="이름 또는 전화번호" autoComplete="off" style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:17,color:T.ink,fontWeight:800,minWidth:0}}/>
+        {draft.name&&<button type="button" onPointerDown={e=>e.preventDefault()} onClick={clearCustomerSearch} style={{width:28,height:28,borderRadius:'50%',border:'none',background:T.line,color:T.ink2,fontSize:13,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>}
+        <button type="button" onPointerDown={e=>e.preventDefault()} onClick={closeSearchDock} aria-label="검색 닫기" style={{width:34,height:34,borderRadius:'50%',border:'none',background:T.ink,color:'#fff',fontSize:18,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>✓</button>
+      </div>
+      <div style={{borderRadius:16,border:`1px solid ${T.line2}`,overflowY:'auto',WebkitOverflowScrolling:'touch',overscrollBehaviorY:'contain',maxHeight:dockListMaxHeight,background:T.surface,flexShrink:1}}>
+        {q? suggestionRows : customers.slice(0,4).map((m,i)=><button key={m.id||m.name} type="button" onPointerDown={e=>e.preventDefault()} onClick={()=>pickCustomer(m)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',width:'100%',textAlign:'left',border:'none',background:T.surface,borderBottom:i<Math.min(customers.length,4)-1?`1px solid ${T.line2}`:'none',cursor:'pointer'}}>
+          <div style={{width:34,height:34,borderRadius:'50%',background:colorPalette(m.color).fill,color:colorPalette(m.color).ink,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:900,flexShrink:0}}>{m.name?.[0]||'?'}</div>
+          <div style={{flex:1,minWidth:0}}><div className="nui-card-text" style={{fontSize:14,fontWeight:900}}>{m.name}</div><div className="nui-card-text" style={{fontSize:11,color:T.ink2,marginTop:1}}>방문 {m.visits||0}회</div></div>
+        </button>)}
+      </div>
+    </div>}
   </Sheet>;
 }
-
 function S3Time({draft,set,onNext,onBack,onClose}){
   const startTime=normalizeHHMM(draft.startTime||'13:00','13:00');
   const endTime=normalizeHHMM(draft.endTime||addMin(startTime,draft.duration||60),'14:00');
