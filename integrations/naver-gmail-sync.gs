@@ -24,10 +24,15 @@ const NAVER_BOOKING_SENDER = 'naverbooking_noreply@navercorp.com';
 const NAVER_SYNC_LABEL = 'nununanu_naver_booking_synced';
 const NAVER_ERROR_LABEL = 'nununanu_naver_booking_error';
 const NAVER_DEFAULT_LOOKBACK_DAYS = 30;
-const NAVER_DEFAULT_SYNC_MAX_THREADS = 100;
+const NAVER_DEFAULT_SYNC_MAX_THREADS = 30;
+const NAVER_DEFAULT_SYNC_MAX_MESSAGES = 12;
+const NAVER_DEFAULT_BACKFILL_MAX_THREADS = 50;
+const NAVER_DEFAULT_BACKFILL_MAX_MESSAGES = 12;
+const NAVER_MAX_GMAIL_API_MESSAGE_GETS = 20;
 const NAVER_SCRIPT_LOCK_WAIT_MS = 1000;
 const NAVER_DEFAULT_SYNC_URL = 'https://nununanu-app.vercel.app/api/naver-gmail-sync';
 const NAVER_TZ = 'Asia/Seoul';
+const NAVER_BACKFILL_PAGE_TOKEN_PROP = 'naver_booking_backfill_page_token';
 
 const GCAL_BOOKING_SELECT = '*,customers(name,phone)';
 const GCAL_EVENT_MARKER = 'GCAL_EVENT_ID:';
@@ -68,29 +73,63 @@ function syncNaverBookingEmails() {
     const lookbackDays = Number(props.getProperty('NAVER_LOOKBACK_DAYS') || NAVER_DEFAULT_LOOKBACK_DAYS);
     const naverResult = runNaverBookingSync_({
       query: buildRecentNaverQuery_(lookbackDays),
-      maxThreads: Number(props.getProperty('NAVER_SYNC_MAX_THREADS') || NAVER_DEFAULT_SYNC_MAX_THREADS),
+      maxThreads: clampNaverLimit_(props.getProperty('NAVER_SYNC_MAX_THREADS'), NAVER_DEFAULT_SYNC_MAX_THREADS, 100),
+      maxMessages: clampNaverLimit_(props.getProperty('NAVER_SYNC_MAX_MESSAGES'), NAVER_DEFAULT_SYNC_MAX_MESSAGES, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
       ignoreProcessed: false,
       mode: 'recent'
     });
 
-    let calendarResult = null;
-    try {
-      calendarResult = syncConfirmedBookingsToGoogleCalendar();
-    } catch (error) {
-      calendarResult = { failed: true, message: String(error && error.message ? error.message : error) };
-      console.error('[Google Calendar sync from Gmail trigger failed]', calendarResult);
+    const runGoogleCalendar = props.getProperty('NAVER_SYNC_RUN_GCAL') === 'true';
+    let calendarResult = { skipped: true, reason: 'separate_google_calendar_trigger' };
+    if (runGoogleCalendar) {
+      try {
+        calendarResult = syncConfirmedBookingsToGoogleCalendar();
+      } catch (error) {
+        calendarResult = { failed: true, message: String(error && error.message ? error.message : error) };
+        console.error('[Google Calendar sync from Gmail trigger failed]', calendarResult);
+      }
     }
 
     return { naver: naverResult, googleCalendar: calendarResult };
   });
 }
 
+function resyncRecentNaverBookingEmails() {
+  return runNaverBookingSyncLocked_(function() {
+    const props = PropertiesService.getScriptProperties();
+    const lookbackDays = Number(props.getProperty('NAVER_LOOKBACK_DAYS') || NAVER_DEFAULT_LOOKBACK_DAYS);
+    return runNaverBookingSync_({
+      query: buildRecentNaverQuery_(lookbackDays),
+      maxThreads: clampNaverLimit_(props.getProperty('NAVER_SYNC_MAX_THREADS'), NAVER_DEFAULT_SYNC_MAX_THREADS, 100),
+      maxMessages: clampNaverLimit_(props.getProperty('NAVER_SYNC_MAX_MESSAGES'), NAVER_DEFAULT_SYNC_MAX_MESSAGES, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
+      ignoreProcessed: true,
+      payloadOverrides: { forceReprocess: true, suppressPush: true },
+      mode: 'recent_resync'
+    });
+  });
+}
+function resyncErroredNaverBookingEmails() {
+  return runNaverBookingSyncLocked_(function() {
+    const props = PropertiesService.getScriptProperties();
+    return runNaverBookingSync_({
+      query: 'in:anywhere from:' + NAVER_BOOKING_SENDER + ' label:' + NAVER_ERROR_LABEL,
+      maxThreads: clampNaverLimit_(props.getProperty('NAVER_ERROR_RESYNC_MAX_THREADS'), NAVER_DEFAULT_BACKFILL_MAX_THREADS, 100),
+      maxMessages: clampNaverLimit_(props.getProperty('NAVER_ERROR_RESYNC_MAX_MESSAGES'), NAVER_DEFAULT_BACKFILL_MAX_MESSAGES, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
+      ignoreProcessed: true,
+      payloadOverrides: { forceReprocess: true, suppressPush: true },
+      mode: 'error_resync'
+    });
+  });
+}
 function backfillAllCurrentNaverBookingEmails() {
   const props = PropertiesService.getScriptProperties();
   return runNaverBookingSync_({
     query: 'in:anywhere from:' + NAVER_BOOKING_SENDER,
-    maxThreads: Number(props.getProperty('NAVER_BACKFILL_MAX_THREADS') || 1000),
+    maxThreads: clampNaverLimit_(props.getProperty('NAVER_BACKFILL_MAX_THREADS'), NAVER_DEFAULT_BACKFILL_MAX_THREADS, 100),
+    maxMessages: clampNaverLimit_(props.getProperty('NAVER_BACKFILL_MAX_MESSAGES'), NAVER_DEFAULT_BACKFILL_MAX_MESSAGES, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
     ignoreProcessed: true,
+    payloadOverrides: { forceReprocess: true, suppressPush: true },
+    pageTokenProp: NAVER_BACKFILL_PAGE_TOKEN_PROP,
     mode: 'backfill'
   });
 }
@@ -99,7 +138,7 @@ function runNaverBookingSync_(options) {
   const props = PropertiesService.getScriptProperties();
   const syncedLabel = getOrCreateLabel_(NAVER_SYNC_LABEL);
   const errorLabel = getOrCreateLabel_(NAVER_ERROR_LABEL);
-  const messages = collectNaverMessages_(options.query, options.maxThreads);
+  const messages = collectNaverMessages_(options, props);
   let processed = 0;
   let skipped = 0;
   let failed = 0;
@@ -114,17 +153,18 @@ function runNaverBookingSync_(options) {
     }
 
     try {
-      const result = postNaverBookingMessage_(buildNaverPayload_(message));
+      const payload = buildNaverPayload_(message);
+      if (options.payloadOverrides) Object.assign(payload, options.payloadOverrides);
+      const result = postNaverBookingMessage_(payload);
       if (!result || result.ok !== true) {
         throw new Error('Unexpected sync API response: ' + JSON.stringify(result || {}));
       }
       props.setProperty(processedKey, new Date().toISOString());
-      thread.addLabel(syncedLabel);
-      try { thread.removeLabel(errorLabel); } catch (e) {}
+      markNaverMessageSynced_(message, syncedLabel, errorLabel);
       processed += 1;
     } catch (error) {
       failed += 1;
-      thread.addLabel(errorLabel);
+      markNaverMessageFailed_(message, errorLabel);
       console.error('[Naver Gmail sync failed]', message.getSubject(), messageId, error);
     }
   });
@@ -134,13 +174,25 @@ function runNaverBookingSync_(options) {
   return result;
 }
 
-function collectNaverMessages_(query, maxThreads) {
+function collectNaverMessages_(options, props) {
+  if (isGmailApiAvailable_()) {
+    try {
+      return collectNaverMessagesViaGmailApi_(options, props);
+    } catch (error) {
+      console.error('[Naver Gmail API collection failed]', error);
+      throw error;
+    }
+  }
+  return collectNaverMessagesViaGmailApp_(options, props);
+}
+
+function collectNaverMessagesViaGmailApp_(options, props) {
   const threads = [];
-  const limit = Math.max(1, Number(maxThreads || NAVER_DEFAULT_SYNC_MAX_THREADS));
+  const limit = Math.max(1, Number(options.maxThreads || NAVER_DEFAULT_SYNC_MAX_THREADS));
   const batchSize = Math.min(100, limit);
 
   for (let start = 0; start < limit; start += batchSize) {
-    const found = GmailApp.search(query, start, Math.min(batchSize, limit - start));
+    const found = GmailApp.search(options.query, start, Math.min(batchSize, limit - start));
     if (!found.length) break;
     threads.push.apply(threads, found);
     if (found.length < batchSize) break;
@@ -148,12 +200,123 @@ function collectNaverMessages_(query, maxThreads) {
 
   return threads
     .flatMap(thread => thread.getMessages())
+    .filter(message => !shouldSkipNaverMessage_(message.getId(), options, props))
+    .filter(message => String(message.getFrom() || '').toLowerCase().indexOf(NAVER_BOOKING_SENDER) >= 0)
+    .slice(0, Math.max(1, Number(options.maxMessages || NAVER_DEFAULT_SYNC_MAX_MESSAGES)))
+    .sort((a, b) => a.getDate().getTime() - b.getDate().getTime());
+}
+
+function collectNaverMessagesViaGmailApi_(options, props) {
+  const limit = Math.max(1, Number(options.maxThreads || NAVER_DEFAULT_SYNC_MAX_THREADS));
+  const maxMessages = Math.max(1, Math.min(
+    NAVER_MAX_GMAIL_API_MESSAGE_GETS,
+    Number(options.maxMessages || NAVER_DEFAULT_SYNC_MAX_MESSAGES)
+  ));
+  const summaries = [];
+  let pageToken = options.pageTokenProp ? String(props.getProperty(options.pageTokenProp) || '') : '';
+
+  while (summaries.length < limit) {
+    const res = Gmail.Users.Messages.list('me', {
+      q: options.query,
+      includeSpamTrash: true,
+      maxResults: Math.min(100, limit - summaries.length),
+      pageToken: pageToken || undefined,
+      fields: 'messages(id,threadId),nextPageToken'
+    });
+    (res.messages || []).forEach(message => summaries.push(message));
+    pageToken = res.nextPageToken || '';
+    if (!pageToken || !(res.messages || []).length) break;
+  }
+
+  if (options.pageTokenProp) {
+    if (pageToken) props.setProperty(options.pageTokenProp, pageToken);
+    else props.deleteProperty(options.pageTokenProp);
+  }
+
+  const candidates = summaries
+    .filter(message => !shouldSkipNaverMessage_(message.id, options, props))
+    .slice(0, maxMessages);
+
+  return candidates
+    .map(message => Gmail.Users.Messages.get('me', message.id, { format: 'full' }))
+    .map(gmailApiMessageWrapper_)
     .filter(message => String(message.getFrom() || '').toLowerCase().indexOf(NAVER_BOOKING_SENDER) >= 0)
     .sort((a, b) => a.getDate().getTime() - b.getDate().getTime());
 }
 
+function shouldSkipNaverMessage_(messageId, options, props) {
+  const id = String(messageId || '').trim();
+  if (!id || options.ignoreProcessed) return false;
+  return Boolean(props.getProperty('naver_booking_processed_' + id));
+}
+
+function clampNaverLimit_(value, fallback, max) {
+  const parsed = Number(value || fallback);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.max(1, Math.min(max, Math.floor(parsed)));
+}
+
+function gmailApiMessageWrapper_(message) {
+  const headers = (message.payload && message.payload.headers) || [];
+  const header = function(name) {
+    const found = headers.find(item => String(item.name || '').toLowerCase() === String(name).toLowerCase());
+    return found ? String(found.value || '') : '';
+  };
+  const fallbackSnippet = String(message.snippet || '');
+  const plainBody = extractGmailMimeBody_(message.payload, 'text/plain') || fallbackSnippet;
+  const htmlBody = extractGmailMimeBody_(message.payload, 'text/html') || plainBody || fallbackSnippet;
+  const dateMs = Number(message.internalDate || 0) || Date.parse(header('Date')) || Date.now();
+
+  return {
+    __gmailApi: true,
+    getId: function() { return message.id || ''; },
+    getThread: function() {
+      return { getId: function() { return message.threadId || ''; } };
+    },
+    getDate: function() { return new Date(dateMs); },
+    getFrom: function() { return header('From'); },
+    getSubject: function() { return header('Subject'); },
+    getPlainBody: function() { return plainBody || fallbackSnippet || ''; },
+    getBody: function() { return htmlBody || plainBody || fallbackSnippet || ''; }
+  };
+}
+
+function extractGmailMimeBody_(part, targetMimeType) {
+  if (!part) return '';
+  const chunks = [];
+  collectGmailMimeBodyParts_(part, targetMimeType, chunks);
+  return chunks.join('\n').trim();
+}
+
+function collectGmailMimeBodyParts_(part, targetMimeType, chunks) {
+  if (!part) return;
+  if (part.mimeType === targetMimeType && part.body && part.body.data) {
+    chunks.push(decodeGmailBody_(part.body.data));
+  }
+  (part.parts || []).forEach(child => collectGmailMimeBodyParts_(child, targetMimeType, chunks));
+}
+
+function decodeGmailBody_(data) {
+  const raw = String(data || '').replace(/\s/g, '');
+  if (!raw) return '';
+  const padded = raw + '='.repeat((4 - (raw.length % 4)) % 4);
+  try {
+    const bytes = Utilities.base64DecodeWebSafe(padded);
+    return Utilities.newBlob(bytes).getDataAsString('UTF-8');
+  } catch (error) {
+    try {
+      const standard = padded.replace(/-/g, '+').replace(/_/g, '/');
+      const bytes = Utilities.base64Decode(standard);
+      return Utilities.newBlob(bytes).getDataAsString('UTF-8');
+    } catch (fallbackError) {
+      return '';
+    }
+  }
+}
+
 function buildNaverPayload_(message) {
   const plainBody = message.getPlainBody() || '';
+  const htmlBody = message.getBody() || '';
   return {
     gmailAccount: NAVER_GMAIL_ACCOUNT,
     messageId: message.getId(),
@@ -162,8 +325,8 @@ function buildNaverPayload_(message) {
     from: message.getFrom() || NAVER_BOOKING_SENDER,
     subject: message.getSubject() || '',
     plainBody: plainBody,
-    htmlBody: message.getBody() || '',
-    snippet: plainBody.slice(0, 500)
+    htmlBody: htmlBody,
+    snippet: (plainBody || htmlBody).slice(0, 500)
   };
 }
 
@@ -235,7 +398,7 @@ function installGoogleCalendarTrigger() {
 function syncConfirmedBookingsToGoogleCalendar() {
   const props = PropertiesService.getScriptProperties();
   const startedAt = new Date(props.getProperty('GCAL_SYNC_STARTED_AT') || new Date().toISOString()).getTime();
-  const rows = sbGet_('bookings?select=' + encodeURIComponent(GCAL_BOOKING_SELECT) + '&status=eq.confirmed&order=updated_at.desc&limit=500');
+  const rows = sbGet_('bookings?select=' + encodeURIComponent(GCAL_BOOKING_SELECT) + '&status=eq.confirmed&order=created_at.desc&limit=500');
   let created = 0;
   let skipped = 0;
   let failed = 0;
@@ -296,7 +459,7 @@ function isNaverLinkedBooking_(booking) {
 
 function syncCancelledBookingsFromGoogleCalendar_() {
   const props = PropertiesService.getScriptProperties();
-  const rows = sbGet_('bookings?select=id,customer_memo,status&status=eq.cancelled&order=updated_at.desc&limit=200');
+  const rows = sbGet_('bookings?select=id,customer_memo,status&status=eq.cancelled&order=created_at.desc&limit=200');
   let removed = 0;
   let skipped = 0;
   let failed = 0;
@@ -432,5 +595,51 @@ function appendUniqueLine_(memo, line) {
 }
 
 function getOrCreateLabel_(name) {
+  if (isGmailApiAvailable_()) {
+    try {
+      return getOrCreateGmailApiLabel_(name);
+    } catch (error) {
+      console.warn('[Gmail API label fallback]', error);
+    }
+  }
   return GmailApp.getUserLabelByName(name) || GmailApp.createLabel(name);
+}
+
+function isGmailApiAvailable_() {
+  return typeof Gmail !== 'undefined' && Gmail.Users && Gmail.Users.Messages && Gmail.Users.Labels;
+}
+
+function getOrCreateGmailApiLabel_(name) {
+  const labels = (Gmail.Users.Labels.list('me').labels || []);
+  const existing = labels.find(label => label.name === name);
+  if (existing) {
+    return { __gmailApi: true, id: existing.id, name: existing.name };
+  }
+  const created = Gmail.Users.Labels.create({
+    name: name,
+    labelListVisibility: 'labelShow',
+    messageListVisibility: 'show'
+  }, 'me');
+  return { __gmailApi: true, id: created.id, name: created.name || name };
+}
+
+function markNaverMessageSynced_(message, syncedLabel, errorLabel) {
+  if (message && message.__gmailApi && syncedLabel && syncedLabel.__gmailApi) {
+    const request = { addLabelIds: [syncedLabel.id] };
+    if (errorLabel && errorLabel.__gmailApi && errorLabel.id) request.removeLabelIds = [errorLabel.id];
+    Gmail.Users.Messages.modify(request, 'me', message.getId());
+    return;
+  }
+
+  const thread = message.getThread();
+  thread.addLabel(syncedLabel);
+  try { thread.removeLabel(errorLabel); } catch (e) {}
+}
+
+function markNaverMessageFailed_(message, errorLabel) {
+  if (message && message.__gmailApi && errorLabel && errorLabel.__gmailApi) {
+    Gmail.Users.Messages.modify({ addLabelIds: [errorLabel.id] }, 'me', message.getId());
+    return;
+  }
+  message.getThread().addLabel(errorLabel);
 }

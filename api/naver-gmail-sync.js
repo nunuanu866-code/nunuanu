@@ -64,6 +64,20 @@ const FIELD_LABELS = {
   ],
 };
 
+const FIELD_BOUNDARY_LABELS = [
+  '\uC608\uC57D\uC2E0\uCCAD \uC77C\uC2DC',
+  '\uC608\uC57D\uC2E0\uCCAD\uC77C\uC2DC',
+  '\uC608\uC57D\uB0B4\uC5ED',
+  '\uC608\uC57D\uCDE8\uC18C \uC77C\uC2DC',
+  '\uC608\uC57D\uCDE8\uC18C\uC77C\uC2DC',
+  '\uC608\uC57D\uCDE8\uC18C\uB0B4\uC5ED',
+  '\uACB0\uC81C\uC0C1\uD0DC',
+  '\uBC29\uBB38\uC790 \uC815\uBCF4',
+  '\uC694\uCCAD\uC0AC\uD56D',
+];
+
+const ALL_FIELD_LABELS = [...new Set([...Object.values(FIELD_LABELS).flat(), ...FIELD_BOUNDARY_LABELS])];
+
 function json(res, status, body) {
   res.status(status).json(body);
 }
@@ -212,6 +226,19 @@ function escapeRegex(value) {
   return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function trimAtFollowingFieldLabel(value, currentLabels = []) {
+  const current = new Set(currentLabels);
+  let result = String(value || '');
+  for (const label of ALL_FIELD_LABELS) {
+    if (current.has(label)) continue;
+    const match = result.match(new RegExp(`\\s+${escapeRegex(label)}\\s*[:：>\\-]?`, 'i'));
+    if (match && match.index > 0) {
+      result = result.slice(0, match.index);
+    }
+  }
+  return result;
+}
+
 function pickField(text, labels) {
   const source = String(text || '');
   const lines = source.split('\n').map(line => line.trim()).filter(Boolean);
@@ -222,7 +249,7 @@ function pickField(text, labels) {
     const inline = new RegExp(`${escaped}\\s*[:：>\\-]?\\s*([^\\n]+)`, 'i');
     const inlineMatch = source.match(inline);
     if (inlineMatch) {
-      const value = cleanField(inlineMatch[1]);
+      const value = cleanField(trimAtFollowingFieldLabel(inlineMatch[1], labels));
       if (value && !labelSet.has(value)) return value;
     }
 
@@ -233,14 +260,15 @@ function pickField(text, labels) {
       line.startsWith(`${label}：`)
     ));
     if (index >= 0) {
-      const sameLine = cleanField(lines[index].replace(new RegExp(`^${escaped}\\s*[:：>\\-]?\\s*`, 'i'), ''));
+      const sameLine = cleanField(trimAtFollowingFieldLabel(lines[index].replace(new RegExp(`^${escaped}\\s*[:：>\\-]?\\s*`, 'i'), ''), labels));
       if (sameLine && sameLine !== label && !labelSet.has(sameLine)) return sameLine;
       const next = lines.slice(index + 1).find(line => !labelSet.has(line));
-      if (next) return cleanField(next);
+      if (next) return cleanField(trimAtFollowingFieldLabel(next, labels));
     }
   }
   return '';
 }
+
 
 function detectEventType(text) {
   const value = String(text || '');
@@ -356,6 +384,12 @@ function fallbackName(text) {
   return match?.[1] || '';
 }
 
+function cleanNaverCustomerName(value) {
+  return cleanField(trimAtFollowingFieldLabel(value, []))
+    .replace(/\s*(예약신청\s*일시|예약내역|예약취소\s*일시|예약취소내역|예약상품|이용일시|예약번호|결제상태).*$/i, '')
+    .trim();
+}
+
 function parseNaverMessage(payload) {
   const subject = normalizeText(payload.subject || '');
   const body = normalizeText(payload.plainBody || payload.htmlBody || payload.body || '');
@@ -366,6 +400,7 @@ function parseNaverMessage(payload) {
   }
 
   const rawName = pickField(text, FIELD_LABELS.name) || fallbackName(text);
+  const customerName = cleanNaverCustomerName(rawName);
   const rawDateTime = pickField(text, FIELD_LABELS.datetime) || text;
   const reservationNo = cleanField(pickField(text, FIELD_LABELS.reservationNo));
   const productName = cleanField(pickField(text, FIELD_LABELS.product)) || KO.naverBooking;
@@ -373,7 +408,7 @@ function parseNaverMessage(payload) {
   const parsedTime = parseNaverDateTime(rawDateTime);
 
   const missing = [];
-  if (!rawName) missing.push('customer_name');
+  if (!customerName) missing.push('customer_name');
   if (!parsedTime) missing.push('booking_datetime');
   if (!reservationNo) missing.push('reservation_no');
   if (missing.length) {
@@ -381,7 +416,7 @@ function parseNaverMessage(payload) {
     error.parsed = {
       eventType,
       sourceKey: payload.messageId ? `message-${payload.messageId}` : '',
-      customerName: rawName || '',
+      customerName: customerName || rawName || '',
       productName,
       rawSubject: subject,
       rawBody: body.slice(0, 12000),
@@ -399,8 +434,8 @@ function parseNaverMessage(payload) {
     eventType,
     sourceKey,
     reservationNo,
-    customerName: cleanField(rawName),
-    customerDisplayName: withNaverPrefix(rawName),
+    customerName: customerName,
+    customerDisplayName: withNaverPrefix(customerName),
     phone,
     pin: pinFromPhone(phone),
     bookingDate: parsedTime.date,
@@ -439,13 +474,18 @@ async function logMailEvent(parsed, payload, bookingId, status, errorMessage = '
   }
 }
 
-async function findLinkedBooking(sourceKey) {
+async function findNaverLink(sourceKey) {
   if (!sourceKey) return null;
-  const links = await sbGet(`naver_booking_links?select=booking_id&source_key=eq.${encodeURIComponent(sourceKey)}&order=updated_at.desc&limit=1`).catch(() => []);
-  const bookingId = links?.[0]?.booking_id;
+  const links = await sbGet(`naver_booking_links?select=booking_id,customer_id,status,last_event_type&source_key=eq.${encodeURIComponent(sourceKey)}&order=created_at.desc&limit=1`).catch(() => []);
+  return links?.[0] || null;
+}
+
+async function findLinkedBooking(sourceKey) {
+  const link = await findNaverLink(sourceKey);
+  const bookingId = link?.booking_id;
   if (!bookingId) return null;
   const rows = await sbGet(`bookings?select=id,customer_id,status&id=eq.${encodeURIComponent(bookingId)}&limit=1`).catch(() => []);
-  return rows?.[0] || { id: bookingId };
+  return rows?.[0] || { id: bookingId, customer_id: link.customer_id || null };
 }
 
 async function upsertLink(parsed, bookingId, customerId, status, payload) {
@@ -482,13 +522,13 @@ async function findCustomerByPhone(phone) {
 async function findExistingBookingByDetails(parsed, customerId) {
   if (!customerId) return null;
   const sameSlot = await sbGet(
-    `bookings?select=id,customer_id,status,booking_date,start_time,end_time,service_type,service_detail&customer_id=eq.${encodeURIComponent(customerId)}&booking_date=eq.${encodeURIComponent(parsed.bookingDate)}&start_time=eq.${encodeURIComponent(parsed.startTime)}&order=updated_at.desc&limit=1`
+    `bookings?select=id,customer_id,status,booking_date,start_time,end_time,service_type,service_detail&customer_id=eq.${encodeURIComponent(customerId)}&booking_date=eq.${encodeURIComponent(parsed.bookingDate)}&start_time=eq.${encodeURIComponent(parsed.startTime)}&order=created_at.desc&limit=1`
   ).catch(() => []);
   if (sameSlot?.[0]?.id) return sameSlot[0];
 
   if (String(parsed.phone || '').startsWith('naver-reservation-')) {
     const rows = await sbGet(
-      `bookings?select=id,customer_id,status,booking_date,start_time,end_time,service_type,service_detail&customer_id=eq.${encodeURIComponent(customerId)}&order=updated_at.desc&limit=1`
+      `bookings?select=id,customer_id,status,booking_date,start_time,end_time,service_type,service_detail&customer_id=eq.${encodeURIComponent(customerId)}&order=created_at.desc&limit=1`
     ).catch(() => []);
     if (rows?.[0]?.id) return rows[0];
   }
@@ -496,12 +536,40 @@ async function findExistingBookingByDetails(parsed, customerId) {
   return null;
 }
 
+function legacyReservationPhonePrefix(parsed) {
+  const reservationNo = cleanSourceKey(parsed?.reservationNo || '');
+  return reservationNo ? `naver-reservation-${reservationNo}` : '';
+}
+
+function idListParam(ids) {
+  return ids.map(id => encodeURIComponent(id)).join(',');
+}
+
+async function findLegacyCustomersByReservation(parsed) {
+  const prefix = legacyReservationPhonePrefix(parsed);
+  if (!prefix) return [];
+  const rows = await sbGet(
+    `customers?select=id,name,phone,memo&phone=like.${encodeURIComponent(prefix + '*')}&limit=50`
+  ).catch(() => []);
+  const exactPhone = String(parsed?.phone || '');
+  return (rows || []).filter(row => row?.id && String(row.phone || '') !== exactPhone);
+}
+
+async function findLegacyBookingByReservation(parsed) {
+  const customers = await findLegacyCustomersByReservation(parsed);
+  const ids = customers.map(customer => customer.id).filter(Boolean);
+  if (!ids.length) return null;
+  const rows = await sbGet(
+    `bookings?select=id,customer_id,status,booking_date,start_time,end_time,service_type,service_detail&customer_id=in.(${idListParam(ids)})&booking_date=eq.${encodeURIComponent(parsed.bookingDate)}&start_time=eq.${encodeURIComponent(parsed.startTime)}&status=eq.confirmed&order=created_at.asc&limit=1`
+  ).catch(() => []);
+  return rows?.[0] || null;
+}
 async function ensureCustomer(parsed) {
   const existing = await findCustomerByPhone(parsed.phone);
   if (existing?.id) {
     const patch = {};
-    if (existing.name !== withNaverPrefix(existing.name || parsed.customerName)) {
-      patch.name = withNaverPrefix(existing.name || parsed.customerName);
+    if (parsed.customerDisplayName && existing.name !== parsed.customerDisplayName) {
+      patch.name = parsed.customerDisplayName;
     }
     if (!existing.pin && parsed.pin) patch.pin = parsed.pin;
     if (Object.keys(patch).length) {
@@ -520,10 +588,12 @@ async function ensureCustomer(parsed) {
 }
 
 async function upsertConfirmedBooking(parsed, payload) {
-  const linked = await findLinkedBooking(parsed.sourceKey);
+  const existingLink = await findNaverLink(parsed.sourceKey);
+  const linked = existingLink?.booking_id ? await findLinkedBooking(parsed.sourceKey) : null;
   const customerId = await ensureCustomer(parsed);
   if (!customerId) throw new Error(`customer_not_saved:${parsed.sourceKey}`);
-  const existing = linked || await findExistingBookingByDetails(parsed, customerId);
+  const legacyExisting = linked ? null : await findLegacyBookingByReservation(parsed);
+  const existing = linked || await findExistingBookingByDetails(parsed, customerId) || legacyExisting;
 
   const bookingPayload = {
     customer_id: customerId,
@@ -549,6 +619,17 @@ async function upsertConfirmedBooking(parsed, payload) {
   }
   if (!bookingId) throw new Error(`booking_not_saved:${parsed.sourceKey}`);
 
+  if (existingLink?.status === 'pending_cancel_match' || existingLink?.last_event_type === 'cancelled') {
+    await sbPatch('bookings', `id=eq.${encodeURIComponent(bookingId)}`, {
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      customer_memo: '',
+    });
+    await upsertLink(parsed, bookingId, customerId, 'cancelled', payload);
+    await logMailEvent(parsed, payload, bookingId, 'processed', 'Applied previously received cancellation.');
+    return { action: 'cancelled_from_pending', bookingId };
+  }
+
   await upsertLink(parsed, bookingId, customerId, 'confirmed', payload);
   await logMailEvent(parsed, payload, bookingId, 'processed');
   return { action, bookingId };
@@ -557,14 +638,12 @@ async function upsertConfirmedBooking(parsed, payload) {
 async function cancelBooking(parsed, payload) {
   const linked = await findLinkedBooking(parsed.sourceKey);
   const existingCustomer = linked ? null : await findCustomerByPhone(parsed.phone);
-  const existing = linked || (existingCustomer?.id ? await findExistingBookingByDetails(parsed, existingCustomer.id) : null);
+  const legacyExisting = linked ? null : await findLegacyBookingByReservation(parsed);
+  const existing = linked || (existingCustomer?.id ? await findExistingBookingByDetails(parsed, existingCustomer.id) : null) || legacyExisting;
   if (!existing?.id) {
     await upsertLink(parsed, null, null, 'pending_cancel_match', payload);
-    await logMailEvent(parsed, payload, null, 'cancel_missing_booking', 'Matching booking was not found by reservation number.');
-    const error = new Error(`cancel_missing_booking:${parsed.sourceKey}`);
-    error.status = 409;
-    error.logged = true;
-    throw error;
+    await logMailEvent(parsed, payload, null, 'processed', 'pending_cancel_match: Matching confirmation has not been synced yet.');
+    return { action: 'pending_cancel_match', bookingId: null, pending: true };
   }
 
   await sbPatch('bookings', `id=eq.${encodeURIComponent(existing.id)}`, {
@@ -590,7 +669,9 @@ export default async function handler(req, res) {
   }
 
   const previous = await findProcessedMailEvent(payload);
-  if (previous?.processed_status === 'processed') {
+  const forceReprocess = payload.forceReprocess === true || payload.force === true;
+  const suppressPush = payload.suppressPush === true;
+  if (!forceReprocess && previous?.processed_status === 'processed') {
     return json(res, 200, { ok: true, skipped: true, reason: 'already_processed', bookingId: previous.booking_id || null });
   }
 
@@ -606,10 +687,10 @@ export default async function handler(req, res) {
       ? await cancelBooking(parsed, payload)
       : await upsertConfirmedBooking(parsed, payload);
 
-    if (parsed.eventType === 'confirmed' && result.action === 'updated') {
+    if (!suppressPush && parsed.eventType === 'confirmed' && result.action === 'updated') {
       await enqueueNaverBookingUpdatedPush(parsed, payload, result.bookingId);
     }
-    const dispatchTriggered = await triggerPushDispatch(req);
+    const dispatchTriggered = suppressPush ? false : await triggerPushDispatch(req);
 
     return json(res, 200, { ok: true, eventType: parsed.eventType, dispatchTriggered, ...result });
   } catch (error) {
