@@ -81,6 +81,15 @@ async function sbPatch(table, filter, body) {
   });
   if (!r.ok) throw new Error(`Supabase PATCH ${r.status}: ${await r.text()}`);
 }
+async function sbPatchRows(table, filter, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+    method: 'PATCH',
+    headers: sbHeaders({ Prefer: 'return=representation' }),
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`Supabase PATCH ${r.status}: ${await r.text()}`);
+  return r.json();
+}
 
 function b64url(value) {
   return Buffer.from(value).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -119,14 +128,14 @@ async function getFirebaseAccessToken() {
 
 function eventUrl(event) {
   const data = event.data || {};
-  if (data.url) return new URL(String(data.url), APP_URL).toString();
-  if (data.target === 'customer') return new URL('/', APP_URL).toString();
-  return `${APP_URL}/admin.html`;
+  if (data.target === 'customer') return new URL(data.url || '/', APP_URL).toString();
+  return new URL(adminRoutePathForEvent(event, data), APP_URL).toString();
 }
 
 function stringData(event) {
   const data = {
     event_id: event.id,
+    event_key: event.event_key || event.id,
     type: event.type,
     booking_id: event.booking_id || '',
     staff_id: event.staff_id || '',
@@ -139,6 +148,7 @@ function hasBrokenKorean(value) {
   const text = String(value || '');
   return text.includes('�')
     || /[占筌椰袁諭]/.test(text)
+    || /\?{2,}/.test(text)
     || text.includes('?덉')
     || text.includes('?ㅽ')
     || text.includes('?붿')
@@ -151,6 +161,32 @@ function cleanFallbackText(value, fallback = '') {
   const text = String(value || '').trim();
   if (!text || hasBrokenKorean(text)) return fallback;
   return text;
+}
+
+function defaultAdminTabForType(type, data = {}) {
+  if (data.tab) return data.tab;
+  if (type === 'staff_approval_requested' || type === 'staff_approval_confirmed') return 'me';
+  if (String(type || '').startsWith('staff_') || type === 'staff_day_off_updated') return 'staff';
+  if (type === 'booking_request' || type === 'booking_cancel_requested' || type === 'booking_rejected') return 'inbox';
+  if (String(type || '').startsWith('booking_') || type === 'schedule_notice_updated') return 'schedule';
+  return 'today';
+}
+
+function adminRoutePathForEvent(event, data = {}, booking = null) {
+  if (data.target === 'customer') return '/';
+  const routeUrl = new URL(data.url || '/admin.html', APP_URL);
+  if (!routeUrl.pathname.endsWith('/admin.html')) return `${routeUrl.pathname}${routeUrl.search}`;
+
+  const tab = defaultAdminTabForType(event.type, data);
+  if (tab) routeUrl.searchParams.set('tab', tab);
+  const date = data.date || data.booking_date || booking?.booking_date || '';
+  if (date) routeUrl.searchParams.set('date', date);
+  const start = String(data.start_time || booking?.start_time || '').slice(0, 5);
+  if (start) routeUrl.searchParams.set('start_time', start);
+  const bookingId = data.booking_id || data.bookingId || event.booking_id || booking?.id || '';
+  if (bookingId) routeUrl.searchParams.set('booking_id', bookingId);
+  if (data.staff_id || data.staffId || event.staff_id) routeUrl.searchParams.set('staff_id', data.staff_id || data.staffId || event.staff_id);
+  return `${routeUrl.pathname}${routeUrl.search}`;
 }
 
 async function loadBookingForEvent(event) {
@@ -174,6 +210,16 @@ async function normalizePushEvent(event) {
   const data = { ...(event.data || {}) };
   if (data.target === 'customer' && !data.recipient_phone && booking?.customers?.phone) {
     data.recipient_phone = String(booking.customers.phone).replace(/\D/g, '');
+  }
+  if (booking?.booking_date && !data.date) data.date = booking.booking_date;
+  if (booking?.booking_date && !data.booking_date) data.booking_date = booking.booking_date;
+  if (booking?.start_time && !data.start_time) data.start_time = String(booking.start_time || '').slice(0, 5);
+  if (event.booking_id && !data.booking_id) data.booking_id = event.booking_id;
+  if (data.target !== 'customer') {
+    data.tab = defaultAdminTabForType(event.type, data);
+    data.url = adminRoutePathForEvent(event, data, booking);
+  } else {
+    data.url = data.url || '/';
   }
 
   const isCustomerEvent = data.target === 'customer';
@@ -277,12 +323,66 @@ function subscriptionQuery(event) {
   return base;
 }
 
-function filterSubscriptionsForEvent(subscriptions, event) {
-  const rows = subscriptions || [];
-  if (event.data?.target === 'customer') return rows;
-  return rows.filter(sub => !String(sub.staff_name || '').startsWith('customer:'));
+function subscriptionDedupeKey(sub) {
+  const token = String(sub?.token || '');
+  if (token.startsWith('webpush:')) {
+    try {
+      const parsed = JSON.parse(token.slice('webpush:'.length));
+      if (parsed?.endpoint) return `webpush:${parsed.endpoint}`;
+    } catch {
+      // Ignore malformed webpush subscription payloads and fall back to token/id based dedupe.
+    }
+  }
+  return token || `subscription:${sub?.id || Math.random()}`;
 }
 
+function dedupeSubscriptions(subscriptions) {
+  const seen = new Set();
+  return (subscriptions || []).filter(sub => {
+    const key = subscriptionDedupeKey(sub);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function filterSubscriptionsForEvent(subscriptions, event) {
+  const rows = subscriptions || [];
+  const filtered = event.data?.target === 'customer'
+    ? rows
+    : rows.filter(sub => !String(sub.staff_name || '').startsWith('customer:'));
+  return dedupeSubscriptions(filtered);
+}
+
+const DISPATCH_LOCK_PREFIX = 'dispatching:';
+const DISPATCH_LOCK_TTL_MS = 2 * 60 * 1000;
+
+function isActiveDispatchLock(event) {
+  const value = String(event?.last_error || '');
+  if (!value.startsWith(DISPATCH_LOCK_PREFIX)) return false;
+  const tail = value.slice(DISPATCH_LOCK_PREFIX.length);
+  const splitAt = tail.lastIndexOf(':');
+  const iso = splitAt >= 0 ? tail.slice(0, splitAt) : tail;
+  const lockedAt = Date.parse(iso || '');
+  return Number.isFinite(lockedAt) && Date.now() - lockedAt < DISPATCH_LOCK_TTL_MS;
+}
+
+async function claimPendingEvent(event, runId) {
+  if (isActiveDispatchLock(event)) return null;
+  const attempts = Number(event.attempts || 0);
+  const rows = await sbPatchRows('push_notification_events', `id=eq.${event.id}&status=eq.pending&attempts=eq.${attempts}`, {
+    attempts: attempts + 1,
+    last_error: `${DISPATCH_LOCK_PREFIX}${new Date().toISOString()}:${runId}`,
+  });
+  return rows?.[0] || null;
+}
+
+function isRedundantStaffAudienceEvent(event) {
+  if (event.data?.target === 'customer') return false;
+  if (event.audience !== 'staff') return false;
+  if (!event.booking_id) return false;
+  return ['booking_confirmed', 'booking_cancelled', 'booking_rejected'].includes(event.type);
+}
 function isInvalidTokenError(error) {
   const body = String(error?.body || error?.message || '');
   return error?.status === 404
@@ -321,23 +421,40 @@ export default async function handler(req, res) {
   const events = await sbGet(`push_notification_events?select=*&status=eq.pending&order=created_at.asc&limit=${limit}`);
   if (!events.length) return json(res, 200, { ok: true, processed: 0 });
 
+  const runId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   let accessToken = null;
   const result = [];
 
   for (const event of events) {
+    const claimedEvent = await claimPendingEvent(event, runId);
+    if (!claimedEvent) {
+      result.push({ id: event.id, skipped: 'already_claimed' });
+      continue;
+    }
+
+    if (isRedundantStaffAudienceEvent(claimedEvent)) {
+      await sbPatch('push_notification_events', `id=eq.${claimedEvent.id}`, {
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        last_error: 'suppressed_duplicate_staff_audience',
+      });
+      result.push({ id: claimedEvent.id, sent: 0, failed: 0, suppressed: 'duplicate_staff_audience' });
+      continue;
+    }
+
     let sent = 0;
     let failed = 0;
     let lastError = '';
-    const pushEvent = await normalizePushEvent(event);
+    const pushEvent = await normalizePushEvent(claimedEvent);
     const subscriptions = filterSubscriptionsForEvent(await sbGet(subscriptionQuery(pushEvent)), pushEvent);
 
     if (!subscriptions.length) {
-      await sbPatch('push_notification_events', `id=eq.${event.id}`, {
+      await sbPatch('push_notification_events', `id=eq.${claimedEvent.id}`, {
         status: 'failed',
-        attempts: Number(event.attempts || 0) + 1,
+        attempts: Number(claimedEvent.attempts || 0),
         last_error: 'no_active_subscriptions',
       });
-      result.push({ id: event.id, sent, failed, error: 'no_active_subscriptions' });
+      result.push({ id: claimedEvent.id, sent, failed, error: 'no_active_subscriptions' });
       continue;
     }
 
@@ -360,13 +477,13 @@ export default async function handler(req, res) {
       }
     }
 
-    await sbPatch('push_notification_events', `id=eq.${event.id}`, {
+    await sbPatch('push_notification_events', `id=eq.${claimedEvent.id}`, {
       status: sent > 0 ? 'sent' : 'failed',
-      attempts: Number(event.attempts || 0) + 1,
+      attempts: Number(claimedEvent.attempts || 0),
       sent_at: sent > 0 ? new Date().toISOString() : null,
       last_error: sent > 0 ? null : lastError || 'send_failed',
     });
-    result.push({ id: event.id, sent, failed, lastError });
+    result.push({ id: claimedEvent.id, sent, failed, lastError });
   }
 
   return json(res, 200, { ok: true, processed: result.length, result });

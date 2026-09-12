@@ -63,7 +63,7 @@ async function sbGet(path) {
 async function sbUpsertPushEvent(body) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/push_notification_events?on_conflict=event_key`, {
     method: 'POST',
-    headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' }),
+    headers: sbHeaders({ Prefer: 'resolution=ignore-duplicates,return=representation' }),
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`Supabase UPSERT ${r.status}: ${await r.text()}`);
@@ -94,6 +94,46 @@ function eventKeyFor(type, bookingId, supplied) {
 
 function safeObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function defaultAdminTabForType(type, data = {}) {
+  if (data.tab) return data.tab;
+  if (type === 'staff_approval_requested' || type === 'staff_approval_confirmed') return 'me';
+  if (String(type || '').startsWith('staff_') || type === 'staff_day_off_updated') return 'staff';
+  if (type === 'booking_request' || type === 'booking_cancel_requested' || type === 'booking_rejected') return 'inbox';
+  if (String(type || '').startsWith('booking_') || type === 'schedule_notice_updated') return 'schedule';
+  return 'today';
+}
+
+function adminRouteData(type, rawData = {}, booking = null, bookingId = '') {
+  const data = { ...rawData };
+  const routeUrl = new URL('/admin.html', APP_URL);
+  const tab = defaultAdminTabForType(type, data);
+  if (tab) routeUrl.searchParams.set('tab', tab);
+
+  const date = data.date || data.booking_date || booking?.booking_date || '';
+  if (date) {
+    data.date = date;
+    data.booking_date = data.booking_date || date;
+    routeUrl.searchParams.set('date', date);
+  }
+
+  const start = String(data.start_time || booking?.start_time || '').slice(0, 5);
+  if (start) {
+    data.start_time = start;
+    routeUrl.searchParams.set('start_time', start);
+  }
+
+  const id = data.booking_id || data.bookingId || booking?.id || bookingId || '';
+  if (id) {
+    data.booking_id = id;
+    routeUrl.searchParams.set('booking_id', id);
+  }
+
+  if (data.staff_id || data.staffId) routeUrl.searchParams.set('staff_id', data.staff_id || data.staffId);
+  data.tab = tab;
+  data.url = `${routeUrl.pathname}${routeUrl.search}`;
+  return data;
 }
 
 async function triggerDispatch(req) {
@@ -148,14 +188,13 @@ export default async function handler(req, res) {
       return json(res, 403, { ok: false, error: 'phone_mismatch' });
     }
 
-    const data = {
-      url: '/admin.html',
+    const data = adminRouteData(type, {
       ...safeObject(body.data),
       ...(booking ? {
         booking_date: booking.booking_date,
         start_time: String(booking.start_time || '').slice(0, 5),
       } : {}),
-    };
+    }, booking, bookingId);
 
     const rows = await sbUpsertPushEvent({
       event_key: eventKeyFor(type, bookingId, body.eventKey || body.event_key),

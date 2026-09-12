@@ -63,6 +63,47 @@
     .booking-edit-sheet{max-width:calc(100vw - 16px)!important;overflow-x:hidden!important;overscroll-behavior-x:none;touch-action:pan-y}
     .booking-edit-panel{max-width:100vw!important;overflow-x:hidden!important;overscroll-behavior-x:none;touch-action:pan-y}
     .booking-edit-body{min-width:0;max-width:100%;overflow-x:hidden!important;overscroll-behavior-x:none;touch-action:pan-y}
+    .schedule-header-row{min-width:0;max-width:100%}
+    .schedule-header-main{min-width:0;max-width:100%}
+    .schedule-header-date-row{min-width:0;max-width:100%}
+    .schedule-header-date-button{min-width:0;max-width:100%}
+    .schedule-header-date-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .schedule-header-actions{min-width:0;max-width:100%;flex-shrink:0}
+    @media (max-width:560px){
+      .schedule-header-row{align-items:flex-start!important;flex-wrap:wrap!important;gap:8px!important}
+      .schedule-header-main{width:100%!important;flex:1 1 100%!important}
+      .schedule-header-date-row{width:100%!important;gap:2px!important}
+      .schedule-header-date-button{flex:1 1 auto!important;justify-content:center!important;padding-left:2px!important;padding-right:2px!important}
+      .schedule-header-date-text{font-size:18px!important;letter-spacing:-.3px!important}
+      .schedule-header-actions{width:100%!important;margin-left:0!important;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(128px,1fr))!important;gap:8px!important;justify-content:stretch!important}
+      .schedule-header-actions button{width:100%!important;height:38px!important;padding-left:8px!important;padding-right:8px!important}
+    }
+    .booking-edit-sheet{box-sizing:border-box;max-width:calc(100vw - 20px)}
+    .booking-edit-sheet *{box-sizing:border-box}
+    .booking-edit-sheet .booking-edit-body{flex:1 1 auto!important;min-height:0!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    .booking-edit-sheet .booking-edit-actions{flex-shrink:0!important;background:#fff;box-shadow:0 -8px 18px rgba(255,255,255,.94)}
+    .booking-edit-time-row>div{min-width:0}
+    @media (max-width:420px){
+      .booking-edit-sheet{left:50%!important;top:auto!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important;width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;max-height:calc(100dvh - 28px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;border-radius:22px!important}
+      .booking-edit-sheet>div:first-child{padding:16px 16px 10px!important;flex-shrink:0!important}
+      .booking-edit-sheet>div:first-child button{width:40px!important;height:40px!important;flex-shrink:0!important}
+      .booking-edit-body{padding:14px 14px 16px!important;gap:10px!important}
+      .booking-edit-two-col{grid-template-columns:1fr!important;gap:9px!important}
+      .booking-edit-time-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:8px!important}
+      .booking-edit-time-row label{font-size:10px!important;line-height:1.25!important;white-space:nowrap!important;letter-spacing:0!important}
+      .booking-edit-time-row input{height:42px!important;font-size:13px!important;text-align:center!important;padding-left:4px!important;padding-right:4px!important}
+      .booking-edit-actions{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))!important;gap:8px!important;align-items:center!important}
+      .booking-edit-actions button{height:48px!important;border-radius:14px!important;font-size:12px!important;min-width:0!important;white-space:nowrap!important;padding-left:4px!important;padding-right:4px!important}
+    }
+    @media (max-width:360px){
+      .booking-edit-time-row{grid-template-columns:1fr!important}
+      .booking-edit-actions{display:grid!important;grid-template-columns:1fr 1fr!important}
+      .booking-edit-actions button{width:100%!important;flex:auto!important}
+      .booking-edit-actions button:last-child{grid-column:1 / -1!important}
+      .schedule-header-date-text{font-size:16px!important}
+      .schedule-header-actions{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))!important;gap:6px!important}
+      .schedule-header-actions button{font-size:11px!important;padding-left:6px!important;padding-right:6px!important}
+    }
     .booking-edit-two-col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
     .booking-edit-two-col>*,
     .booking-edit-time-row>*,
@@ -101,6 +142,58 @@
       .booking-edit-actions button{flex:1 1 calc(50% - 6px)!important}
       .booking-edit-actions button:last-child{flex-basis:100%!important}
     }
+
+    /* Final mobile guard for the schedule booking edit modal. */
+    .booking-edit-sheet{box-sizing:border-box;max-width:calc(100vw - 20px)!important}
+    .booking-edit-sheet *{box-sizing:border-box}
+    .booking-edit-sheet .booking-edit-body{flex:1 1 auto!important;min-height:0!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    .booking-edit-sheet .booking-edit-actions{flex-shrink:0!important;background:#fff;box-shadow:0 -8px 18px rgba(255,255,255,.94);z-index:1}
+    @media (max-width:420px){
+      .booking-edit-sheet{left:50%!important;top:auto!important;bottom:max(8px,env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important;width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;max-height:calc(100vh - 28px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;max-height:calc(100dvh - 28px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;border-radius:22px!important}
+      .booking-edit-sheet>div:first-child{padding:16px 16px 10px!important;flex-shrink:0!important}
+      .booking-edit-sheet>div:first-child>div{min-width:0!important}
+      .booking-edit-sheet>div:first-child button{width:40px!important;height:40px!important;flex-shrink:0!important}
+      .booking-edit-body{padding:14px 14px 18px!important;gap:10px!important}
+      .booking-edit-time-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:8px!important}
+      .booking-edit-time-row>*{min-width:0!important}
+      .booking-edit-time-row label{font-size:10px!important;line-height:1.25!important;white-space:nowrap!important;letter-spacing:0!important}
+      .booking-edit-time-row input{height:42px!important;font-size:13px!important;text-align:center!important;padding-left:4px!important;padding-right:4px!important}
+      .booking-edit-actions{display:flex!important;flex-wrap:nowrap!important;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))!important;gap:8px!important;align-items:center!important}
+      .booking-edit-actions button{height:48px!important;border-radius:14px!important;font-size:12px!important;min-width:0!important;white-space:nowrap!important;padding-left:4px!important;padding-right:4px!important}
+    }
+    @media (max-width:360px){
+      .booking-edit-time-row{grid-template-columns:1fr!important}
+      .booking-edit-actions{display:grid!important;grid-template-columns:1fr 1fr!important}
+      .booking-edit-actions button{width:100%!important;flex:auto!important}
+      .booking-edit-actions button:last-child{grid-column:1 / -1!important;flex-basis:auto!important}
+    }
+
+    /* Final fit for schedule edit date/time controls. */
+    .booking-edit-date-field{width:100%;max-width:100%;min-width:0;overflow:hidden}
+    .booking-edit-time-input{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;-webkit-appearance:none;-moz-appearance:none;appearance:none;background:#fff;line-height:42px!important;padding-top:0!important;padding-bottom:0!important}
+    .booking-edit-body textarea{width:100%;max-width:100%;min-width:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+    .booking-edit-time-row{-moz-column-gap:14px!important;column-gap:14px!important;row-gap:10px!important}
+    @media (max-width:420px){
+      .booking-edit-date-input{height:42px!important;text-align:center!important;padding-left:8px!important;padding-right:8px!important;font-size:14px!important}
+      .booking-edit-time-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;-moz-column-gap:14px!important;column-gap:14px!important;row-gap:10px!important}
+      .booking-edit-time-input{height:42px!important;text-align:center!important;padding-left:6px!important;padding-right:6px!important;font-size:16px!important}
+      .booking-edit-body input,.booking-edit-body textarea{font-size:16px!important}
+    }
+
+    /* Visible date box and centered time text for schedule edit modal. */
+    .booking-edit-sheet .booking-edit-body{align-items:stretch!important}
+    .booking-edit-date-field{display:block!important;position:relative!important;z-index:2!important;flex:0 0 auto!important;width:100%!important;max-width:100%!important;min-width:0!important;min-height:66px!important;overflow:visible!important;margin:0!important}
+    .booking-edit-date-box{position:relative!important;z-index:2!important;width:100%!important;height:46px!important;min-height:46px!important;border-radius:13px!important;border:1.5px solid #dedee2!important;background:#f0f0f2!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;max-width:100%!important;box-sizing:border-box!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.92)!important}
+    .booking-edit-date-box span{display:block!important;font-size:15px!important;font-weight:900!important;color:#1d1d1f!important;font-variant-numeric:tabular-nums!important;line-height:1!important;pointer-events:none!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:calc(100% - 24px)!important;text-align:center!important}
+    .booking-edit-date-input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:100%!important;min-width:0!important;opacity:0!important;box-sizing:border-box!important;cursor:pointer!important}
+    .booking-edit-time-row{position:relative!important;z-index:1!important;flex:0 0 auto!important;width:100%!important;margin-top:0!important;align-items:start!important}
+    .booking-edit-time-input{display:flex!important;align-items:center!important;justify-content:center!important;line-height:42px!important;padding-top:0!important;padding-bottom:0!important;text-align:center!important;background:#f0f0f2!important;border-color:#dedee2!important}
+    @media (max-width:420px){
+      .booking-edit-date-field{min-height:64px!important}
+      .booking-edit-date-box{height:44px!important;min-height:44px!important}
+      .booking-edit-date-box span{font-size:15px!important}
+      .booking-edit-time-input{line-height:42px!important;padding-top:0!important;padding-bottom:0!important;text-align:center!important}
+    }
   </style>
   <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
@@ -125,7 +218,7 @@ console.warn = function(...args) {
   originalWarn.apply(console, args);
 };
 
-window.NUNU_ADMIN_RELEASE_ID = '20260710-mobile-search-layer-fix';
+window.NUNU_ADMIN_RELEASE_ID = '20260912-edit-back-navigation';
 console.log('누누아누 관리자 v2.0.0-FINAL-20260703-CUSTOMER-NO-DETAIL');
 console.log('React loaded:', typeof React !== 'undefined');
 console.log('ReactDOM loaded:', typeof ReactDOM !== 'undefined');
@@ -261,6 +354,39 @@ function bookingPlainMemo(row){return splitBookingMemo(bookingMemoValue(row)).te
 function plainBookingMemo(row){return bookingPlainMemo(row);}
 function bookingDisplayMemo(row){
   return bookingPlainMemo(row)||String(row?.service_detail||row?.memo||'').trim();
+}
+function autoGrowMemoTextarea(target,minHeight=58){
+  const el=target&&target.target?target.target:target;
+  if(!el)return;
+  requestAnimationFrame(()=>{
+    const viewportHeight=Math.max(360,Math.round(window.visualViewport?.height||window.innerHeight||720));
+    const maxHeight=Math.max(minHeight,Math.min(220,Math.floor(viewportHeight*0.34)));
+    el.style.height='auto';
+    const nextHeight=Math.min(Math.max(minHeight,el.scrollHeight),maxHeight);
+    el.style.height=nextHeight+'px';
+    el.style.overflowY=el.scrollHeight>maxHeight?'auto':'hidden';
+  });
+}
+function resetMobileKeyboardViewport(options={}){
+  if(typeof window==='undefined'||typeof document==='undefined')return;
+  const blurActive=options.blurActive!==false;
+  const active=document.activeElement;
+  if(blurActive&&active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName)){
+    try{active.blur();}catch{}
+  }
+  const restore=()=>{
+    try{document.documentElement.style.removeProperty('--nunu-keyboard-offset');}catch{}
+    try{window.dispatchEvent(new Event('resize'));}catch{}
+  };
+  requestAnimationFrame(()=>{
+    restore();
+    setTimeout(restore,80);
+    setTimeout(restore,220);
+  });
+}
+function handleMemoTextareaBlur(e){
+  autoGrowMemoTextarea(e);
+  setTimeout(()=>resetMobileKeyboardViewport({blurActive:false}),80);
 }
 function bookingCustomerOverride(row){
   const override=splitBookingMemo(bookingMemoValue(row)).meta?.customer_override;
@@ -451,69 +577,52 @@ function parseStaffAttendanceRow(row){
   try{
     const meta=JSON.parse(row.customer_memo||'{}')||{};
     if(meta.type!=='staff_attendance')return null;
+    const hasMetaIn=Object.prototype.hasOwnProperty.call(meta,'in');
+    const hasMetaOut=Object.prototype.hasOwnProperty.call(meta,'out');
+    const inTime=normalizeStaffTenMinuteTime(hasMetaIn?meta.in:(row.start_time||''));
+    const outTime=normalizeStaffTenMinuteTime(hasMetaOut?meta.out:(row.end_time||''));
+    const minutes=attendanceMinutesBetween(inTime,outTime,meta.minutes);
     return{
       date:meta.date||row.booking_date,
       staffId:meta.staff_id||meta.staffId,
-      in:meta.in||'',
-      out:meta.out||'',
-      minutes:Number(meta.minutes)||0,
-      updatedAt:meta.updated_at||row.created_at,
+      in:inTime,
+      out:outTime,
+      minutes,
+      updatedAt:meta.updated_at||meta.updatedAt||row.created_at,
       _rowId:row.id,
       _customerId:row.customer_id
     };
   }catch{return null;}
 }
-function staffDayOffMemo(data){
-  return JSON.stringify({
-    type:'staff_day_off',
-    staff_id:data.staffId,
-    staff_name:data.staffName||'',
-    date:data.date,
-    off:data.off!==false,
-    note:data.note||'',
-    updated_at:new Date().toISOString()
-  });
+function attendanceMinutesBetween(inTime,outTime,fallback=0){
+  const a=String(inTime||'').match(/^(\d{1,2}):(\d{2})/);
+  const b=String(outTime||'').match(/^(\d{1,2}):(\d{2})/);
+  if(!a||!b)return Number(fallback)||0;
+  const start=(Number(a[1])||0)*60+(Number(a[2])||0);
+  const end=(Number(b[1])||0)*60+(Number(b[2])||0);
+  return Math.max(0,end-start);
 }
-function parseStaffDayOffRow(row){
-  if(row?.service_detail!==STAFF_DAY_OFF_SERVICE)return null;
-  try{
-    const meta=JSON.parse(row.customer_memo||'{}')||{};
-    if(meta.type!=='staff_day_off')return null;
-    return{
-      date:meta.date||row.booking_date,
-      staffId:meta.staff_id||meta.staffId,
-      staffName:meta.staff_name||meta.staffName||'스텝',
-      off:row.status!=='cancelled'&&meta.off!==false,
-      note:meta.note||'',
-      updatedAt:meta.updated_at||row.updated_at||row.created_at,
-      _rowId:row.id,
-      _customerId:row.customer_id
-    };
-  }catch{return null;}
+function attendanceRecordStamp(row){
+  const time=Date.parse(row?.updatedAt||'');
+  return Number.isFinite(time)?time:0;
 }
-function scheduleNoticeMemo(data){
-  return JSON.stringify({
-    type:'schedule_notice',
-    date:data.date,
-    text:data.text||'',
-    updated_by:data.updatedBy||'관리자',
-    updated_at:new Date().toISOString()
-  });
+function attendanceRecordScore(row){
+  return (row?.in?1:0)+(row?.out?2:0)+(Number(row?.minutes)>0?1:0);
 }
-function parseScheduleNoticeRow(row){
-  if(row?.service_detail!==SCHEDULE_NOTICE_SERVICE)return null;
-  try{
-    const meta=JSON.parse(row.customer_memo||'{}')||{};
-    if(meta.type!=='schedule_notice')return null;
-    return{
-      date:meta.date||row.booking_date,
-      text:row.status==='cancelled'?'':(meta.text||''),
-      updatedBy:meta.updated_by||meta.updatedBy||'관리자',
-      updatedAt:meta.updated_at||row.updated_at||row.created_at,
-      _rowId:row.id,
-      _customerId:row.customer_id
-    };
-  }catch{return null;}
+function attendanceRecordIsNewer(next,current){
+  const nextScore=attendanceRecordScore(next);
+  const currentScore=attendanceRecordScore(current);
+  if(nextScore!==currentScore)return nextScore>currentScore;
+  const nextStamp=attendanceRecordStamp(next);
+  const currentStamp=attendanceRecordStamp(current);
+  if(nextStamp!==currentStamp)return nextStamp>currentStamp;
+  return String(next?._rowId||'')>String(current?._rowId||'');
+}
+function putStaffAttendanceRecord(target,row){
+  if(!row?.date||!row?.staffId)return;
+  const current=target?.[row.date]?.[row.staffId];
+  if(current&&!attendanceRecordIsNewer(row,current))return;
+  target[row.date]={...(target[row.date]||{}),[row.staffId]:row};
 }
 function staffVisibilityMemo(data){
   return JSON.stringify({
@@ -1138,7 +1247,7 @@ function gcalSaveToken(resp) {
     expires_at: Date.now() + (resp.expires_in || 3600) * 1000,
     email: ''
   };
-  // ?ъ슜???대찓??議고쉶
+  // 사용자 이메일 조회
   fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: { Authorization: `Bearer ${resp.access_token}` }
   }).then(r => r.json()).then(info => {
@@ -1165,7 +1274,7 @@ function gcalInit(clientId, onToken) {
     client_id: clientId,
     scope: GCAL_SCOPE,
     callback: (resp) => {
-      if (resp.error) { console.error('Google OAuth ?ㅻ쪟:', resp.error); return; }
+      if (resp.error) { console.error('Google OAuth 오류:', resp.error); return; }
       const saved = gcalSaveToken(resp);
       if (onToken) setTimeout(() => onToken(saved), 500);
     }
@@ -1218,7 +1327,7 @@ async function gcalCreateEvent(booking, staffLabel) {
     });
     const body = await r.json();
     if (!r.ok) {
-      // ?좏겙 留뚮즺 ??
+      // 토큰 만료 등
       if (r.status === 401) {
         localStorage.removeItem(GCAL_KEY);
         return { ok: false, reason: 'token_expired' };
@@ -1431,11 +1540,17 @@ function rawDurationBetween(start,end){return minutesFromHHMM(end,'10:00')-minut
 function durationBetween(start,end){
   return Math.max(10,rawDurationBetween(start,end));
 }
-function fitStaffSegsToDuration(segs,totalDur,step=10,minDur=10){
-  const unit=Math.max(1,Number(step)||10);
+const STAFF_ASSIGNMENT_LIMIT=5;
+function staffAssignmentLimit(totalDur,minDur=5){
+  const total=Number(totalDur)||0;
+  const minUnit=Math.max(1,Number(minDur)||1);
+  return Math.max(1,Math.min(STAFF_ASSIGNMENT_LIMIT,Math.floor(total/minUnit)||1));
+}
+function fitStaffSegsToDuration(segs,totalDur,step=5,minDur=5){
+  const unit=Math.max(1,Number(step)||5);
   const minUnit=Math.max(1,Number(minDur)||unit);
   const total=Math.max(minUnit,Number(totalDur)||minUnit);
-  const maxCount=Math.max(1,Math.floor(total/minUnit));
+  const maxCount=staffAssignmentLimit(total,minUnit);
   const clean=(segs||[])
     .filter(s=>s&&s.staffId)
     .slice(0,maxCount)
@@ -1453,6 +1568,12 @@ function fitStaffSegsToDuration(segs,totalDur,step=10,minDur=10){
     remaining-=dur;
     return{...s,dur};
   }).filter(s=>s.dur>0);
+}
+function addStaffSegWithSplit(segs,newSeg,totalDur,step=5,minDur=5){
+  const clean=(segs||[]).filter(x=>x&&x.staffId);
+  const limit=staffAssignmentLimit(totalDur,minDur);
+  if(clean.length>=limit)return fitStaffSegsToDuration(clean,totalDur,step,minDur);
+  return fitStaffSegsToDuration([...clean,{...newSeg,dur:minDur}],totalDur,step,minDur);
 }
 function nowStr(){const d=new Date();return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;}
 const QUICK_TIMES=Array.from({length:24},(_,i)=>`${pad2(i)}:00`);
@@ -1671,7 +1792,30 @@ function SFoot({children}){return <div style={{padding:`${NUI.space[6]}px ${NUI.
 function FF({label,children}){return <div style={{marginBottom:NUI.space[7],minWidth:0}}><label className="lbl">{label}</label>{children}</div>;}
 
 
-function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,onCreateBooking,onOpenBooking,staffFilterId=null}){
+function getStaffDayOffsForDate(staffDayOffByDate,dateKey,staff=[]){
+  const dayMap=staffDayOffByDate?.get?.(dateKey);
+  if(!dayMap)return[];
+  return (staff||[])
+    .filter(s=>dayMap.has(s.id))
+    .map(s=>({...dayMap.get(s.id),staffName:s.name||dayMap.get(s.id)?.staffName||'스텝'}));
+}
+function AdminNoticeBanner({staffDayOffs=[],scheduleNotice=null,dateLabel='',compact=false,style={}}){
+  const noticeText=String(scheduleNotice?.text||'').trim();
+  const offRows=Array.isArray(staffDayOffs)?staffDayOffs.filter(Boolean):[];
+  if(!noticeText&&!offRows.length)return null;
+  return <div style={{border:'1px solid #e15555',background:'#e15555',borderRadius:compact?10:12,padding:compact?'10px 12px':'13px 16px',display:'flex',alignItems:'flex-start',gap:10,boxShadow:compact?'none':'0 1px 0 rgba(0,0,0,.03)',minWidth:0,...style}}>
+    <div style={{width:compact?24:28,height:compact?24:28,borderRadius:8,background:'rgba(255,255,255,.16)',border:'1px solid rgba(255,255,255,.32)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:compact?14:16,fontWeight:900,color:'#fff',flexShrink:0}}>!</div>
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontSize:compact?13:14,fontWeight:900,color:'rgba(255,255,255,.82)',marginBottom:offRows.length||noticeText?5:0}}>공지사항{dateLabel?` · ${dateLabel}`:''}</div>
+      {offRows.length>0&&<div style={{fontSize:compact?14:16,fontWeight:900,color:'#fff',marginBottom:noticeText?6:0,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{color:'rgba(255,255,255,.82)'}}>휴무</span>
+        {offRows.map((row,idx)=><span key={row.staffId||row.staffName||idx} style={{display:'inline-flex',alignItems:'center',height:compact?24:26,padding:compact?'0 8px':'0 10px',borderRadius:999,background:'rgba(255,255,255,.18)',color:'#fff',fontSize:compact?13:14,fontWeight:900}}>{row.staffName}</span>)}
+      </div>}
+      {noticeText&&<div style={{fontSize:compact?14:16,fontWeight:900,color:'#fff',lineHeight:1.48,whiteSpace:'pre-line',wordBreak:'break-word'}}>{noticeText}</div>}
+    </div>
+  </div>;
+}
+function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,onCreateBooking,onOpenBooking,staffFilterId=null,staffDayOffByDate=null,scheduleNoticeByDate=null,fullScreen=false}){
   const[vm,setVm]=useState(()=>{const d=new Date(value);d.setDate(1);return d;});
   const[selectedDate,setSelectedDate]=useState(()=>{
 
@@ -1683,8 +1827,12 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
   const[showAutocomplete,setShowAutocomplete]=useState(false);
   const[focusedIndex,setFocusedIndex]=useState(-1);
   const[calendarBookings,setCalendarBookings]=useState([]);
+  const[searchBookings,setSearchBookings]=useState([]);
+  const[searchLoading,setSearchLoading]=useState(false);
+  const[searchError,setSearchError]=useState('');
   const[fullListOpen,setFullListOpen]=useState(false);
   const inputRef=useRef(null);
+  const dateStripRef=useRef(null);
 
   const yr=vm.getFullYear(),mo=vm.getMonth();
   const firstDow=new Date(yr,mo,1).getDay();
@@ -1723,31 +1871,87 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
   },[calendarBookings,supaBookings,staffFilterId]);
 
 
-  const autocompleteCustomers=useMemo(()=>{
-    if(!searchQuery.trim())return[];
-    const q=searchQuery.toLowerCase().replace(/-/g,'');
+  const matchingCustomers=useMemo(()=>{
+    const raw=searchQuery.trim();
+    if(!raw)return[];
+    const q=raw.toLowerCase();
+    const phoneQuery=cleanPhoneDigitsFull(raw);
     return (supaCustomers||[])
       .filter(c=>{
-        const name=c.name?.toLowerCase()||'';
-        const phone=c.phone?.replace(/-/g,'')||'';
-        return name.includes(searchQuery.toLowerCase())||phone.includes(q);
-      })
-      .slice(0,5);
+        const name=String(c.name||'').toLowerCase();
+        const phone=cleanPhoneDigitsFull(c.phone||'');
+        return name.includes(q)||(phoneQuery&&phone.includes(phoneQuery));
+      });
   },[searchQuery,supaCustomers]);
+
+  const autocompleteCustomers=useMemo(()=>matchingCustomers.slice(0,5),[matchingCustomers]);
+
+  const searchMatchesBooking=useCallback((b,query,customerIds=new Set())=>{
+    const raw=String(query||'').trim();
+    if(!raw)return false;
+    if(customerIds.has(b?.customer_id))return true;
+    const q=raw.toLowerCase();
+    const phoneQuery=cleanPhoneDigitsFull(raw);
+    const name=bookingCustomerName(b,'').toLowerCase();
+    const phone=cleanPhoneDigitsFull(bookingCustomerPhone(b));
+    const memoText=[
+      bookingPlainMemo(b),
+      bookingDisplayMemo(b),
+      b?.customer_memo,
+      b?.memo,
+      b?.service_detail
+    ].filter(Boolean).join(' ').toLowerCase();
+    return name.includes(q)||memoText.includes(q)||(phoneQuery&&phone.includes(phoneQuery));
+  },[]);
+
+  const loadSearchBookings=useCallback(async(query,forcedCustomerIds=null)=>{
+    const raw=String(query||'').trim();
+    if(!raw)return[];
+    const sourceIds=Array.isArray(forcedCustomerIds)&&forcedCustomerIds.length?forcedCustomerIds:(matchingCustomers||[]).map(c=>c.id);
+    const matchedIds=[...new Set(sourceIds.filter(Boolean))];
+    const matchedIdSet=new Set(matchedIds);
+    const byId=new Map();
+    const addRows=(rows=[])=>{
+      (rows||[])
+        .filter(b=>b?.id)
+        .filter(b=>b.status==='confirmed')
+        .filter(b=>!isSystemBooking(b)&&!bookingAdminDeleted(b))
+        .filter(b=>!staffFilterId||bookingHasStaff(b,staffFilterId))
+        .filter(b=>searchMatchesBooking(b,raw,matchedIdSet))
+        .forEach(b=>byId.set(b.id,b));
+    };
+    for(let i=0;i<matchedIds.length;i+=80){
+      const chunk=matchedIds.slice(i,i+80);
+      if(!chunk.length)continue;
+      const idParam=chunk.map(id=>encodeURIComponent(id)).join(',');
+      const rows=await sbGet(`bookings?select=*,customers(id,name,phone,pin,memo)&customer_id=in.(${idParam})&status=eq.confirmed&order=booking_date.desc&order=start_time.asc&limit=5000`);
+      addRows(rows);
+    }
+    try{
+      const memoLike=encodeURIComponent('*'+raw+'*');
+      const memoRows=await sbGet(`bookings?select=*,customers(id,name,phone,pin,memo)&customer_memo=ilike.${memoLike}&status=eq.confirmed&order=booking_date.desc&order=start_time.asc&limit=5000`);
+      addRows(memoRows);
+    }catch(e){
+      console.warn('[mini calendar memo search skipped]',e);
+    }
+    if(matchedIds.length===0){
+      const rows=await sbGet('bookings?select=*,customers(id,name,phone,pin,memo)&status=eq.confirmed&order=booking_date.desc&order=start_time.asc&limit=5000');
+      addRows(rows);
+    }
+    addRows(calendarSourceBookings);
+    return [...byId.values()].sort((a,b)=>String(b.booking_date||'').localeCompare(String(a.booking_date||''))||String(a.start_time||'').localeCompare(String(b.start_time||'')));
+  },[matchingCustomers,calendarSourceBookings,staffFilterId,searchMatchesBooking]);
 
 
   const searchResults=useMemo(()=>{
     if(!searchQuery.trim())return[];
-    const q=searchQuery.toLowerCase().replace(/-/g,'');
-    return calendarSourceBookings
+    const matchedIdSet=new Set((matchingCustomers||[]).map(c=>c.id).filter(Boolean));
+    const source=searchMode?searchBookings:calendarSourceBookings;
+    return source
       .filter(b=>b.status==='confirmed')
-      .filter(b=>{
-        const name=bookingCustomerName(b,'').toLowerCase();
-        const phone=bookingCustomerPhone(b).replace(/-/g,'');
-        return name.includes(searchQuery)||phone.includes(q);
-      })
-      .sort((a,b)=>a.booking_date.localeCompare(b.booking_date)||a.start_time.localeCompare(b.start_time));
-  },[searchQuery,calendarSourceBookings]);
+      .filter(b=>searchMatchesBooking(b,searchQuery,matchedIdSet))
+      .sort((a,b)=>String(b.booking_date||'').localeCompare(String(a.booking_date||''))||String(a.start_time||'').localeCompare(String(b.start_time||'')));
+  },[searchQuery,searchMode,searchBookings,calendarSourceBookings,matchingCustomers,searchMatchesBooking]);
 
 
   const searchDates=useMemo(()=>{
@@ -1765,32 +1969,60 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     return map;
   },[calendarSourceBookings,searchMode,searchQuery,searchResults]);
 
+  const dateStripItems=useMemo(()=>Array.from({length:daysInMo},(_,idx)=>{
+    const day=idx+1;
+    const date=new Date(yr,mo,day);
+    const dateStr=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    return{date,dateStr,day,dow:date.getDay(),count:bookingsByDate[dateStr]||0,selected:dateStr===selectedDate,today:isToday(date),searchHit:searchMode&&searchDates.includes(dateStr)};
+  }),[yr,mo,daysInMo,bookingsByDate,selectedDate,searchMode,searchDates]);
+
+  useEffect(()=>{
+    if(!fullListOpen)return;
+    requestAnimationFrame(()=>{
+      const el=dateStripRef.current;
+      const target=el?.querySelector?.(`[data-date="${selectedDate}"]`);
+      target?.scrollIntoView?.({behavior:'smooth',inline:'center',block:'nearest'});
+    });
+  },[fullListOpen,selectedDate,yr,mo]);
+
+  const selectDateFromStrip=item=>{
+    if(!item)return;
+    setSelectedDate(item.dateStr);
+    onChange?.(item.date);
+  };
+
   const navBtn=(label,fn)=><button type="button" onClick={fn} style={{width:32,height:32,border:'none',background:'transparent',fontSize:18,color:T.ink2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8}}>{label}</button>;
 
 
   const handleDateClick=(date)=>{
     const dateStr=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-
-
+    setSelectedDate(dateStr);
+    if(fullScreen){
+      onChange?.(date);
+      return;
+    }
     if(dateStr===selectedDate){
       onChange(date);
       onClose?.();
-    } else {
-
-      setSelectedDate(dateStr);
     }
   };
 
 
   const selectedBookings=useMemo(()=>{
+    if(searchMode&&searchQuery.trim())return searchResults;
     if(!selectedDate)return[];
-    const bookings=searchMode&&searchQuery.trim()?searchResults:calendarSourceBookings;
-    return bookings.filter(b=>b.booking_date===selectedDate).sort((a,b)=>a.start_time.localeCompare(b.start_time));
+    return calendarSourceBookings.filter(b=>b.booking_date===selectedDate).sort((a,b)=>a.start_time.localeCompare(b.start_time));
   },[selectedDate,calendarSourceBookings,searchMode,searchQuery,searchResults]);
 
   const svcMap={hair:'헤어',makeup:'메이크업',both:'헤어+메이크업'};
 
   const[y,m,d]=selectedDate.split('-').map(Number);
+  const selectedCalendarNotice=scheduleNoticeByDate?.get?.(selectedDate)||null;
+  const selectedCalendarDayOffs=useMemo(()=>getStaffDayOffsForDate(staffDayOffByDate,selectedDate,staff),[staffDayOffByDate,selectedDate,staff]);
+  const selectedCalendarLabel=`${m}월 ${d}일`;
+  const isSearchActive=searchMode&&!!searchQuery.trim();
+  const listTitle=isSearchActive?`"${searchQuery.trim()}" 전체 예약 (${selectedBookings.length}건)`:`${m}월 ${d}일 예약 (${selectedBookings.length}건)`;
+  const emptyMessage=isSearchActive?'검색 결과가 없습니다':'예약이 없습니다';
 
   const settleSearchKeyboard=()=>{
     inputRef.current?.blur?.();
@@ -1806,16 +2038,43 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     },80);
   };
 
+  const replaceLocalBooking=(nextBooking,mode='update')=>{
+    if(!nextBooking?.id)return;
+    const apply=rows=>{
+      const list=Array.isArray(rows)?rows:[];
+      if(mode==='delete')return list.filter(b=>b.id!==nextBooking.id);
+      let found=false;
+      const next=list.map(b=>{
+        if(b.id!==nextBooking.id)return b;
+        found=true;
+        return{...b,...nextBooking};
+      });
+      return found?next:[nextBooking,...next];
+    };
+    setCalendarBookings(apply);
+    setSearchBookings(apply);
+  };
+
+  const closeMiniCalendarOrigin=()=>{
+    setFullListOpen(false);
+    onClose?.();
+  };
+
   const handleOpenBooking=(booking)=>{
     if(!onOpenBooking)return;
-    setFullListOpen(false);
-    onOpenBooking(booking);
+    onOpenBooking(booking,{
+      source:'miniCalendar',
+      closeOrigin:closeMiniCalendarOrigin,
+      updateOriginBooking:replaceLocalBooking
+    });
   };
 
   const renderBookingCard=(b,full=false)=>{
     const staffLabel=bookingStaffRequestLabel(b,staff);
     const clickable=!!onOpenBooking;
     const memoText=bookingDisplayMemo(b);
+    const timeLabel=`${b.start_time?.slice(0,5)||''} - ${b.end_time?.slice(0,5)||''}`;
+    const cardTimeLabel=isSearchActive&&b.booking_date?`${b.booking_date} (${timeLabel})`:timeLabel;
     return <button
       key={b.id}
       type="button"
@@ -1823,7 +2082,7 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
       disabled={!clickable}
       style={{width:'100%',textAlign:'left',background:T.bg,borderRadius:full?NUI.radius.xl:NUI.radius.md,padding:full?`${NUI.space[6]}px ${NUI.space[7]}px`:`${NUI.space[4]}px ${NUI.space[5]}px`,border:`1px solid ${T.line2}`,minWidth:0,maxWidth:'100%',minHeight:full?78:62,overflow:'hidden',flexShrink:0,cursor:clickable?'pointer':'default',appearance:'none'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:NUI.space[4],marginBottom:full?NUI.space[3]:NUI.space[2],minWidth:0}}>
-        <span className="nui-card-text" style={{fontSize:full?NUI.font.base:NUI.font.sm,fontWeight:900,color:T.ink,lineHeight:NUI.line.tight,fontVariantNumeric:'tabular-nums'}}>{b.start_time?.slice(0,5)} - {b.end_time?.slice(0,5)}</span>
+        <span className="nui-card-text" style={{fontSize:full?NUI.font.base:NUI.font.sm,fontWeight:900,color:T.ink,lineHeight:NUI.line.tight,fontVariantNumeric:'tabular-nums'}}>{cardTimeLabel}</span>
         <span className="nui-chip" style={{fontSize:NUI.font.xxs,fontWeight:800,padding:`${NUI.space[1]}px ${NUI.space[3]}px`,borderRadius:NUI.radius.pill,background:'#DCFCE7',color:'#166534'}}>확정</span>
       </div>
       <div className="nui-card-text" style={{fontSize:full?NUI.font.body:NUI.font.sm,fontWeight:800,color:T.ink,marginBottom:full?NUI.space[2]:NUI.space[1]}}>{bookingCustomerName(b,'고객')}</div>
@@ -1833,18 +2092,32 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
   };
 
 
-  const handleSearch=()=>{
+  const handleSearch=async()=>{
+    const query=searchQuery.trim();
     settleSearchKeyboard();
-    if(searchQuery.trim()){
-      setSearchMode(true);
-
-      if(searchDates.length>0){
-        setSelectedDate(searchDates[0]);
-        const[yy,mm]=searchDates[0].split('-').map(Number);
+    if(!query){
+      setSearchMode(false);
+      setSearchBookings([]);
+      setSearchError('');
+      return;
+    }
+    setSearchMode(true);
+    setSearchLoading(true);
+    setSearchError('');
+    try{
+      const rows=await loadSearchBookings(query);
+      setSearchBookings(rows);
+      if(rows.length>0&&rows[0].booking_date){
+        setSelectedDate(rows[0].booking_date);
+        const[yy,mm]=rows[0].booking_date.split('-').map(Number);
         setVm(new Date(yy,mm-1,1));
       }
-    } else {
-      setSearchMode(false);
+    }catch(e){
+      console.warn('[mini calendar customer full search failed]',e);
+      setSearchBookings([]);
+      setSearchError('검색 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }finally{
+      setSearchLoading(false);
     }
   };
 
@@ -1852,17 +2125,48 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
   const clearSearch=()=>{
     setSearchQuery('');
     setSearchMode(false);
+    setSearchBookings([]);
+    setSearchLoading(false);
+    setSearchError('');
     setShowAutocomplete(false);
     setFocusedIndex(-1);
   };
 
 
-  const handleSelectCustomer=(customer)=>{
+  const handleSelectCustomer=async(customer)=>{
     settleSearchKeyboard();
-    setSearchQuery('');
     setShowAutocomplete(false);
-    setSearchMode(false);
     setFocusedIndex(-1);
+
+    if(fullScreen){
+      const query=String(customer?.name||customer?.phone||searchQuery||'').trim();
+      if(!query)return;
+      setSearchQuery(query);
+      setSearchMode(true);
+      setSearchLoading(true);
+      setSearchError('');
+      try{
+        const rows=await loadSearchBookings(query,customer?.id?[customer.id]:null);
+        setSearchBookings(rows);
+        if(rows.length>0&&rows[0].booking_date){
+          setSelectedDate(rows[0].booking_date);
+          const[yy,mm]=rows[0].booking_date.split('-').map(Number);
+          setVm(new Date(yy,mm-1,1));
+        }
+      }catch(e){
+        console.warn('[mini calendar mobile customer full search failed]',e);
+        setSearchBookings([]);
+        setSearchError('검색 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }finally{
+        setSearchLoading(false);
+      }
+      return;
+    }
+
+    setSearchQuery('');
+    setSearchMode(false);
+    setSearchBookings([]);
+    setSearchError('');
 
     if(onCreateBooking){
       onCreateBooking(customer,selectedDate);
@@ -1901,6 +2205,11 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     setSearchQuery(val);
     setShowAutocomplete(val.trim().length>0);
     setFocusedIndex(-1);
+    if(!val.trim()){
+      setSearchMode(false);
+      setSearchBookings([]);
+      setSearchError('');
+    }
   };
 
 
@@ -1913,7 +2222,8 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
   const hasAutocompleteFeature=supaCustomers&&supaCustomers.length>0&&onCreateBooking;
 
 
-  return <div style={{background:T.surface,borderRadius:18,padding:14,border:`1px solid ${T.line}`,boxShadow:'0 12px 40px rgba(0,0,0,.18)',width:'min(320px,calc(100vw - 32px))',maxWidth:'calc(100vw - 32px)',maxHeight:'80vh',display:'flex',flexDirection:'column',gap:12,overflowX:'hidden',touchAction:'pan-y',overscrollBehaviorX:'none'}}>
+  const rootStyle=fullScreen?{background:T.surface,borderRadius:0,padding:14,border:'none',boxShadow:'none',width:'100%',maxWidth:'100%',maxHeight:'none',flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:12,overflowX:'hidden',touchAction:'pan-y',overscrollBehaviorX:'none'}:{background:T.surface,borderRadius:18,padding:14,border:`1px solid ${T.line}`,boxShadow:'0 12px 40px rgba(0,0,0,.18)',width:'min(320px,calc(100vw - 32px))',maxWidth:'calc(100vw - 32px)',maxHeight:'80vh',display:'flex',flexDirection:'column',gap:12,overflowX:'hidden',touchAction:'pan-y',overscrollBehaviorX:'none'};
+  return <div style={rootStyle}>
 
     <div style={{display:'flex',gap:6}}>
       <div style={{flex:1,position:'relative'}}>
@@ -1947,14 +2257,16 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
           </div>
         </div>}
       </div>
-      <button type="button" onClick={handleSearch} disabled={!searchQuery.trim()} style={{width:36,height:36,borderRadius:10,border:'none',background:searchQuery.trim()?T.ink:T.line,color:searchQuery.trim()?'#fff':T.ink3,fontSize:13,cursor:searchQuery.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800}}>검색</button>
+      <button type="button" onClick={handleSearch} disabled={!searchQuery.trim()||searchLoading} style={{width:36,height:36,borderRadius:10,border:'none',background:searchQuery.trim()&&!searchLoading?T.ink:T.line,color:searchQuery.trim()&&!searchLoading?'#fff':T.ink3,fontSize:13,cursor:searchQuery.trim()&&!searchLoading?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800}}>{searchLoading?'...':'검색'}</button>
     </div>
 
 
-    {searchMode&&searchQuery.trim()&&<div style={{fontSize:11,fontWeight:600,color:T.accent,padding:'4px 8px',background:'#FFF0EA',borderRadius:8,textAlign:'center'}}>
-      "{searchQuery}" 검색 결과: {searchResults.length}건 ({searchDates.length}일)
+    {searchMode&&searchQuery.trim()&&<div style={{fontSize:11,fontWeight:600,color:searchError?T.danger:T.accent,padding:'4px 8px',background:searchError?'#FEF2F2':'#FFF0EA',borderRadius:8,textAlign:'center'}}>
+      {searchLoading?'검색 중...':searchError||`"${searchQuery}" 전체 예약 검색 결과: ${searchResults.length}건 (${searchDates.length}일)`}
     </div>}
 
+
+    <AdminNoticeBanner staffDayOffs={selectedCalendarDayOffs} scheduleNotice={selectedCalendarNotice} dateLabel={selectedCalendarLabel} compact style={{flexShrink:0}}/>
 
     <div>
       <div style={{display:'flex',alignItems:'center',marginBottom:8}}>
@@ -1989,14 +2301,14 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
 
     <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <button type="button" onClick={()=>setFullListOpen(true)} style={{width:'100%',height:32,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:8,color:T.ink,flexShrink:0,border:'none',background:'transparent',padding:0,cursor:'pointer',textAlign:'left'}}>
-        <span style={{fontSize:13,fontWeight:900,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{m}월 {d}일 예약 ({selectedBookings.length}건)</span>
+        <span style={{fontSize:13,fontWeight:900,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{listTitle}</span>
         <span style={{fontSize:11,fontWeight:800,color:T.accent,flexShrink:0}}>전체보기</span>
       </button>
       <div style={{flex:1,minWidth:0,overflowY:'auto',overflowX:'hidden',display:'flex',flexDirection:'column',gap:6,WebkitOverflowScrolling:'touch',touchAction:'pan-y',overscrollBehaviorX:'none'}}>
         {selectedBookings.length===0?(
           <div style={{textAlign:'center',padding:'20px',color:T.ink3,flexShrink:0}}>
             <div style={{fontSize:24,marginBottom:6}}>일정</div>
-            <div style={{fontSize:12,fontWeight:600}}>{searchMode?'검색 결과가 없습니다':'예약이 없습니다'}</div>
+            <div style={{fontSize:12,fontWeight:600}}>{emptyMessage}</div>
           </div>
         ):selectedBookings.map(b=>renderBookingCard(b))}
       </div>
@@ -2005,14 +2317,27 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     {fullListOpen&&ReactDOM.createPortal(<div style={{position:'fixed',inset:0,zIndex:120,background:T.surface,display:'flex',flexDirection:'column',paddingTop:'env(safe-area-inset-top,0px)',paddingBottom:0}}>
       <div style={{height:58,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'0 16px',borderBottom:`1px solid ${T.line2}`,flexShrink:0}}>
         <div style={{minWidth:0}}>
-          <div style={{fontSize:17,fontWeight:900,color:T.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{m}월 {d}일 예약 ({selectedBookings.length}건)</div>
+          <div style={{fontSize:17,fontWeight:900,color:T.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{listTitle}</div>
           <div style={{fontSize:11,color:T.ink2,marginTop:2}}>명단을 누르면 일정 수정 화면으로 이동합니다</div>
         </div>
         <button type="button" onClick={()=>setFullListOpen(false)} style={{width:38,height:38,borderRadius:'50%',border:'none',background:T.line2,color:T.ink,fontSize:16,fontWeight:900,cursor:'pointer',flexShrink:0}}>X</button>
       </div>
+      <AdminNoticeBanner staffDayOffs={selectedCalendarDayOffs} scheduleNotice={selectedCalendarNotice} dateLabel={selectedCalendarLabel} compact style={{margin:'12px 16px 0',flexShrink:0}}/>
+      <div style={{margin:'12px 0 0',padding:'0 0 10px',borderBottom:`1px solid ${T.line2}`,flexShrink:0}}>
+        <div ref={dateStripRef} style={{display:'flex',gap:8,overflowX:'auto',overflowY:'hidden',padding:'0 16px 2px',WebkitOverflowScrolling:'touch',overscrollBehaviorX:'contain',touchAction:'pan-x',scrollSnapType:'x proximity',scrollbarWidth:'none',msOverflowStyle:'none'}}>
+          {dateStripItems.map(item=>{
+            const accentColor=item.dow===0?'#EF4444':item.dow===6?'#3B82F6':T.ink2;
+            return <button key={item.dateStr} data-date={item.dateStr} type="button" onClick={()=>selectDateFromStrip(item)} style={{width:58,height:66,flex:'0 0 auto',borderRadius:16,border:item.selected?`2px solid ${T.ink}`:item.today?`1.5px solid ${T.accent}`:`1px solid ${T.line}`,background:item.selected?T.ink:item.searchHit?'#FEF3C7':T.surface,color:item.selected?'#fff':T.ink,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,boxShadow:item.selected?'0 6px 16px rgba(0,0,0,.14)':'none',scrollSnapAlign:'center'}}>
+              <span style={{fontSize:10,fontWeight:900,color:item.selected?'rgba(255,255,255,.72)':accentColor}}>{DOW_KO[item.dow]}</span>
+              <span style={{fontSize:20,fontWeight:900,lineHeight:1,fontVariantNumeric:'tabular-nums'}}>{item.day}</span>
+              <span style={{height:17,minWidth:22,padding:'0 6px',borderRadius:999,background:item.count>0?(item.selected?'rgba(255,255,255,.18)':'#FEE2E2'):'transparent',color:item.selected?'#fff':item.count>0?'#B91C1C':T.ink3,fontSize:10,fontWeight:900,lineHeight:'17px'}}>{item.count>0?`${item.count}건`:''}</span>
+            </button>;
+          })}
+        </div>
+      </div>
       <div style={{flex:1,minHeight:0,overflowY:'auto',overflowX:'hidden',padding:'16px 16px calc(96px + env(safe-area-inset-bottom,0px))',display:'flex',flexDirection:'column',gap:10,WebkitOverflowScrolling:'touch',touchAction:'pan-y',overscrollBehaviorY:'contain'}}>
         {selectedBookings.length===0?(
-          <div style={{textAlign:'center',padding:'42px 12px',color:T.ink3,fontSize:13,fontWeight:700}}>{searchMode?'검색 결과가 없습니다':'예약이 없습니다'}</div>
+          <div style={{textAlign:'center',padding:'42px 12px',color:T.ink3,fontSize:13,fontWeight:700}}>{emptyMessage}</div>
         ):selectedBookings.map(b=>renderBookingCard(b,true))}
       </div>
     </div>,document.body)}
@@ -3086,6 +3411,7 @@ function S1Date({draft,set,onNext,onClose,supaCustomers,onCustomerSelect}){
 function S2Customer({draft,set,onNext,onBack,onClose,customers}){
   const q=(draft.name||'').trim();
   const inputRef=useRef(null);
+  const dateStripRef=useRef(null);
   const dockInputRef=useRef(null);
   const searchWrapRef=useRef(null);
   const viewportFrame=useVisualViewportFrame();
@@ -3330,16 +3656,15 @@ function S5Staff({draft,set,onNext,onBack,onClose,staff}){
   const toggle=id=>{
     const ex=segs.find(s=>s.staffId===id);
     if(ex){const w=segs.filter(s=>s.staffId!==id);if(!w.length){set({...draft,segs:[]});return;}set({...draft,segs:w.map((s,i)=>i===w.length-1?{...s,dur:s.dur+ex.dur}:s)});}
-    else if(segs.length<3){
+    else if(segs.length<staffAssignmentLimit(draft.duration,5)){
       const stf=staff.find(s=>s.id===id);
       const label=staffSegmentServiceCode({staffId:id},stf);
-      if(!segs.length){set({...draft,segs:[{staffId:id,label,dur:draft.duration}]});}
-      else{const last=segs[segs.length-1],take=Math.min(20,Math.max(10,Math.floor(last.dur/2/10)*10)),newDur=Math.max(10,last.dur-take);set({...draft,segs:[...segs.slice(0,-1),{...last,dur:newDur},{staffId:id,label,dur:take}]});}
+      set({...draft,segs:addStaffSegWithSplit(segs,{staffId:id,label},draft.duration,5,5)});
     }
   };
-  const adjust=(idx,delta)=>{const next=segs.map(s=>({...s}));const other=idx===segs.length-1?idx-1:idx+1;if(other<0||other>=segs.length)return;if(next[idx].dur+delta<10||next[other].dur-delta<10)return;next[idx].dur+=delta;next[other].dur-=delta;set({...draft,segs:next});};
+  const adjust=(idx,delta)=>{const next=segs.map(s=>({...s}));const other=idx===segs.length-1?idx-1:idx+1;if(other<0||other>=segs.length)return;if(next[idx].dur+delta<5||next[other].dur-delta<5)return;next[idx].dur+=delta;next[other].dur-=delta;set({...draft,segs:next});};
   return <Sheet onClose={onClose} step={4} totalSteps={4} onBack={onBack}>
-    <STitle title="스텝을 배정하세요" sub={`최대 3명 · ${draft.duration}분`}/>
+    <STitle title="스텝을 배정하세요" sub={`최대 5명 · ${draft.duration}분`}/>
     <SBody>
       <div style={{display:'flex',gap:8,marginBottom:16}}>
         {staff.map(s=>{const idx=segs.findIndex(x=>x.staffId===s.id),sel=idx>=0;return <button key={s.id} onClick={()=>toggle(s.id)} style={{flex:1,padding:'10px 4px',borderRadius:14,cursor:'pointer',border:sel?`2px solid ${T.ink}`:`1px solid ${T.line}`,background:sel?T.line2:T.surface,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
@@ -3352,13 +3677,13 @@ function S5Staff({draft,set,onNext,onBack,onClose,staff}){
         <div style={{height:40,borderRadius:10,overflow:'hidden',display:'flex',background:T.line2,marginBottom:6}}>
           {splitDur.map((s,i)=>{const stf=staff.find(x=>x.id===s.staffId);return <div key={i} style={{flex:s.dur,background:stf?.color||'#ccc',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,borderRight:i<splitDur.length-1?'2px solid #fff':'none'}}>{staffSegmentDisplay(s,stf)} {s.dur}m</div>;})}
         </div>
-        {splitDur.map((s,i)=>{const stf=staff.find(x=>x.id===s.staffId),nxt=i<splitDur.length-1,prv=i>0,canM=s.dur>10&&segs.length>1&&(nxt?splitDur[i+1].dur:prv?splitDur[i-1].dur:0)>=20,canP=segs.length>1&&(nxt?splitDur[i+1].dur:prv?splitDur[i-1].dur:0)>10;return <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:12,border:`1px solid ${T.line}`,background:T.surface,marginBottom:8}}>
+        {splitDur.map((s,i)=>{const stf=staff.find(x=>x.id===s.staffId),nxt=i<splitDur.length-1,prv=i>0,canM=s.dur>5&&segs.length>1&&(nxt?splitDur[i+1].dur:prv?splitDur[i-1].dur:0)>=10,canP=segs.length>1&&(nxt?splitDur[i+1].dur:prv?splitDur[i-1].dur:0)>5;return <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:12,border:`1px solid ${T.line}`,background:T.surface,marginBottom:8}}>
           <Avatar name={stf?.name} color={stf?.color||'#ccc'} size={34}/>
           <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{staffSegmentDisplay(s,stf)}</div><div style={{fontSize:11,color:T.ink2,fontVariantNumeric:'tabular-nums',marginTop:1}}>{s.from} - {s.to}</div></div>
           <div style={{display:'flex',alignItems:'center',gap:4}}>
-            <button onClick={()=>adjust(i,-10)} disabled={!canM} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.line}`,background:canM?T.surface:T.line2,color:canM?T.ink:T.ink3,fontSize:15,fontWeight:700,cursor:canM?'pointer':'default'}}>-</button>
+            <button onClick={()=>adjust(i,-5)} disabled={!canM} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.line}`,background:canM?T.surface:T.line2,color:canM?T.ink:T.ink3,fontSize:15,fontWeight:700,cursor:canM?'pointer':'default'}}>-</button>
             <div style={{minWidth:46,textAlign:'center',fontSize:14,fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{s.dur}분</div>
-            <button onClick={()=>adjust(i,+10)} disabled={!canP} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.line}`,background:canP?T.surface:T.line2,color:canP?T.ink:T.ink3,fontSize:15,fontWeight:700,cursor:canP?'pointer':'default'}}>+</button>
+            <button onClick={()=>adjust(i,+5)} disabled={!canP} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.line}`,background:canP?T.surface:T.line2,color:canP?T.ink:T.ink3,fontSize:15,fontWeight:700,cursor:canP?'pointer':'default'}}>+</button>
           </div>
           <button onClick={()=>toggle(s.staffId)} style={{width:28,height:28,borderRadius:8,border:`1px solid ${T.line}`,background:T.surface,color:T.ink3,fontSize:12,fontWeight:700,cursor:'pointer'}}>×</button>
         </div>;})}
@@ -3430,20 +3755,111 @@ function StaffForm({initial,usedColors,onSave,onClose}){
     <SFoot><SBtn onClick={onClose} flex={1}>취소</SBtn><PBtn disabled={!valid} onClick={()=>onSave({name:name.trim(),role,title:title.trim()||staffTitleDefault(role),phone:phone.trim(),color,bookingVisible})} flex={2}>{initial?'수정 완료':'스텝 추가'}</PBtn></SFoot>
   </Sheet>;
 }
+function normalizeStaffTenMinuteTime(v){
+  const m=String(v||'').match(/^(\d{1,2}):(\d{1,2})/);
+  if(!m)return '';
+  let h=Number(m[1])||0,min=Number(m[2])||0;
+  min=Math.round(min/10)*10;
+  if(min>=60){h=(h+1)%24;min=0;}
+  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+function staffTimeParts(value){
+  const t=normalizeStaffTenMinuteTime(value);
+  if(!t)return{h:'',m:''};
+  const[h,m]=t.split(':');
+  return{h,m};
+}
+function StaffTime10Picker({label,value,onChange,defaultTime='09:00'}){
+  const{h,m}=staffTimeParts(value);
+  const[open,setOpen]=useState(false);
+  const[draftH,setDraftH]=useState(h||'09');
+  const[draftM,setDraftM]=useState(m||'00');
+  const timeHours=useMemo(()=>Array.from({length:24},(_,i)=>String(i).padStart(2,'0')),[]);
+  const timeMinutes=useMemo(()=>['00','10','20','30','40','50'],[]);
+  const openPicker=()=>{
+    const base=staffTimeParts(value||defaultTime||'09:00');
+    setDraftH(base.h||'09');
+    setDraftM(base.m||'00');
+    setOpen(true);
+  };
+  const closePicker=()=>setOpen(false);
+  const apply=()=>{
+    onChange(`${draftH||'09'}:${draftM||'00'}`);
+    closePicker();
+  };
+  const picker=<>
+    <div style={{position:'fixed',inset:0,zIndex:90,background:'rgba(0,0,0,.38)',touchAction:'none'}}/>
+    <div
+      onClick={e=>e.stopPropagation()}
+      onMouseDown={e=>e.stopPropagation()}
+      onTouchStart={e=>e.stopPropagation()}
+      style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',zIndex:91,width:'min(360px,calc(100vw - 32px))',background:T.surface,borderRadius:22,padding:18,boxShadow:'0 22px 70px rgba(0,0,0,.32)',border:`1px solid ${T.line}`}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12}}>
+        <div>
+          <div style={{fontSize:18,fontWeight:900,color:T.ink}}>{label}</div>
+          <div style={{fontSize:12,fontWeight:700,color:T.ink2,marginTop:3}}>시간과 분을 선택한 뒤 적용을 눌러주세요.</div>
+        </div>
+        <button type="button" onClick={closePicker} style={{width:36,height:36,borderRadius:'50%',border:`1px solid ${T.line}`,background:T.bg,color:T.ink,fontSize:18,fontWeight:900,cursor:'pointer',flexShrink:0}}>×</button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,minWidth:0}}>
+        <DatePartWheel items={timeHours} value={draftH} onChange={setDraftH} label="시" format={v=>`${v}시`}/>
+        <DatePartWheel items={timeMinutes} value={draftM} onChange={setDraftM} label="분" format={v=>`${v}분`}/>
+      </div>
+      <div style={{marginTop:14,padding:'11px 12px',borderRadius:14,background:T.bg,textAlign:'center',fontSize:20,fontWeight:900,color:T.ink,fontVariantNumeric:'tabular-nums'}}>{draftH}:{draftM}</div>
+      <div style={{display:'flex',gap:8,marginTop:12}}>
+        <button type="button" onClick={closePicker} style={{flex:1,height:46,borderRadius:12,border:`1px solid ${T.line}`,background:T.surface,color:T.ink2,fontSize:14,fontWeight:900,cursor:'pointer'}}>취소</button>
+        <button type="button" onClick={apply} style={{flex:1.5,height:46,borderRadius:12,border:'none',background:T.ink,color:'#fff',fontSize:14,fontWeight:900,cursor:'pointer'}}>적용</button>
+      </div>
+    </div>
+  </>;
+  return <div>
+    <label className="lbl">{label}</label>
+    {value?<div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 72px',gap:8,alignItems:'center'}}>
+      <div aria-label={label+' 선택됨'} style={{height:48,width:'100%',borderRadius:12,border:'1.5px solid #FB923C',background:'#EA580C',color:'#fff',fontSize:16,fontWeight:900,fontVariantNumeric:'tabular-nums',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'inset 0 0 0 1px rgba(255,255,255,.18)',userSelect:'none'}}>
+        <span>{value}</span>
+      </div>
+      <button type="button" onClick={openPicker} style={{height:48,borderRadius:12,border:'1.5px solid #FED7AA',background:'#FFF7ED',color:'#C2410C',fontSize:13,fontWeight:900,cursor:'pointer'}}>수정</button>
+    </div>:<button type="button" onClick={openPicker} style={{height:48,width:'100%',borderRadius:12,border:'1.5px solid '+T.line,background:T.surface,color:T.ink3,fontSize:16,fontWeight:900,fontVariantNumeric:'tabular-nums',cursor:'pointer'}}>
+      시간 선택
+    </button>}
+    {open&&ReactDOM.createPortal(picker,document.body)}
+  </div>;
+}
 
-function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,staffDayOffByDate=null,onToggleDayOff}){
+function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,staffDayOffByDate=null,onToggleDayOff,onRefreshStaff=null}){
   const[form,setForm]=useState(null),[selectedStaffId,setSelectedStaffId]=useState(null),[confirmDel,setConfirmDel]=useState(null);
   const[att,setAtt]=useState(()=>LS.get(LS_ATT,{}));
+  const attendanceSaveTimersRef=useRef({});
+  const attendanceSaveSeqRef=useRef({});
+  const pendingAttendanceRef=useRef({});
   const[viewDate,setViewDate]=useState(()=>dateISO(new Date()));
   const[viewMonth,setViewMonth]=useState(()=>dateISO(new Date()).slice(0,7));
   const[mode,setMode]=useState('daily');
+  const[expandedMonthlyStaff,setExpandedMonthlyStaff]=useState({});
+  const[dayOffOverrides,setDayOffOverrides]=useState({});
   const visibleStaff=sessionStaffId?staff.filter(s=>s.id===sessionStaffId):staff;
   const canToggleDayOff=!!onToggleDayOff;
   const usedColors=staff.map(s=>s.color);
   const selectedStaff=visibleStaff.find(s=>s.id===selectedStaffId);
-  const isStaffOff=(date,staffId)=>!!staffDayOffByDate?.get?.(date)?.get?.(staffId);
-  const toggleStaffDayOff=(date,row)=>onToggleDayOff?.(date,row,!isStaffOff(date,row.id));
-  const saveAtt=n=>{setAtt(n);LS.set(LS_ATT,n);};
+  const dayOffKey=(date,staffId)=>String(date||'')+':'+String(staffId||'');
+  const isStaffOff=(date,staffId)=>{const key=dayOffKey(date,staffId);if(Object.prototype.hasOwnProperty.call(dayOffOverrides,key))return !!dayOffOverrides[key];return !!staffDayOffByDate?.get?.(date)?.get?.(staffId);};
+  const toggleStaffDayOff=async(date,row)=>{if(!onToggleDayOff||!date||!row?.id)return false;const key=dayOffKey(date,row.id);const current=isStaffOff(date,row.id);const next=!current;setDayOffOverrides(p=>({...p,[key]:next}));const ok=await onToggleDayOff(date,row,next);if(ok===false)setDayOffOverrides(p=>({...p,[key]:current}));return ok;};
+  const saveAtt=nextOrUpdater=>{
+    setAtt(prev=>{
+      const next=typeof nextOrUpdater==='function'?nextOrUpdater(prev||{}):nextOrUpdater;
+      LS.set(LS_ATT,next||{});
+      return next||{};
+    });
+  };
+  const attendanceKey=(date,staffId)=>String(date||'')+':'+String(staffId||'');
+  useEffect(()=>()=>{
+    Object.values(attendanceSaveTimersRef.current||{}).forEach(timer=>clearTimeout(timer));
+    attendanceSaveTimersRef.current={};
+    pendingAttendanceRef.current={};
+  },[]);
+  const toggleMonthlyStaff=id=>setExpandedMonthlyStaff(p=>({...p,[id]:!p[id]}));
+  const shiftViewMonth=delta=>setViewMonth(v=>{const m=String(v||dateISO(new Date()).slice(0,7)).match(/^(\d{4})-(\d{2})$/);const d=m?new Date(Number(m[1]),Number(m[2])-1+delta,1):new Date();return String(d.getFullYear()).padStart(4,'0')+'-'+String(d.getMonth()+1).padStart(2,'0');});
+  const shiftViewDate=delta=>setViewDate(v=>{const m=String(v||dateISO(new Date())).match(/^(\d{4})-(\d{2})-(\d{2})$/);const d=m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])):new Date();d.setDate(d.getDate()+delta);return dateISO(d);});
   const toTenMinuteTime=v=>{
     const m=String(v||'').match(/^(\d{1,2}):(\d{1,2})/);
     if(!m)return '';
@@ -3455,43 +3871,121 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
   const nowTime=()=>{const d=new Date();return toTenMinuteTime(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'));};
   const diff=(a,b)=>{if(!a||!b)return 0;const[ah,am]=a.split(':').map(Number),[bh,bm]=b.split(':').map(Number);return Math.max(0,(bh*60+bm)-(ah*60+am));};
   const fmt=m=>{m=Number(m)||0;const h=Math.floor(m/60),mm=m%60;return h?`${h}시간 ${mm}분`:`${mm}분`;};
+  const earlyAttendanceTimeStyle=t=>{
+    const m=String(t||'').match(/^(\d{1,2}):(\d{2})/);
+    if(!m)return{};
+    const minutes=(Number(m[1])||0)*60+(Number(m[2])||0);
+    return minutes<=6*60+20?{color:T.danger,fontWeight:900}:{};
+  };
   const rec=(d,id)=>att?.[d]?.[id]||{};
+  const findRemoteAttendanceRows=async(date,staffId)=>{
+    if(!date||!staffId)return[];
+    const path='bookings?select=id,customer_id,booking_date,start_time,end_time,status,service_detail,customer_memo,created_at&service_detail=eq.'+encodeURIComponent(STAFF_ATTENDANCE_SERVICE)+'&booking_date=eq.'+encodeURIComponent(date)+'&order=created_at.desc&limit=300';
+    const rows=await sbGet(path);
+    return (rows||[])
+      .map(parseStaffAttendanceRow)
+      .filter(row=>row&&row.staffId===staffId)
+      .sort((a,b)=>attendanceRecordStamp(b)-attendanceRecordStamp(a));
+  };
+  const patchAttendanceRow=async(rowId,body)=>{
+    if(!rowId)return false;
+    const res=await fetch(SB_URL+'/rest/v1/bookings?id=eq.'+encodeURIComponent(rowId),{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(body)});
+    if(res.ok)return true;
+    console.warn('[attendance patch failed]',res.status,await res.text().catch(()=>''));
+    return false;
+  };
+  const cancelRemoteAttendanceRows=async(rows,keepRowId='')=>{
+    const ids=[...new Set((rows||[]).map(row=>row?._rowId).filter(id=>id&&id!==keepRowId))];
+    await Promise.all(ids.map(id=>fetch(SB_URL+'/rest/v1/bookings?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify({status:'cancelled'})}).catch(e=>console.warn('[attendance duplicate cancel failed]',id,e))));
+  };
   const saveRemoteAttendance=async(date,staffId,r)=>{
-    const staffName=staff.find(s=>s.id===staffId)?.name||'스텝';
+    const staffRow=staff.find(s=>s.id===staffId);
+    const staffName=staffRow?.name||'스텝';
+    const cleanIn=normalizeStaffTenMinuteTime(r.in||'');
+    const cleanOut=normalizeStaffTenMinuteTime(r.out||'');
+    const cleanRecord={...r,date,staffId,in:cleanIn,out:cleanOut,minutes:diff(cleanIn,cleanOut)};
     const body={
       booking_date:date,
-      start_time:r.in||'00:00',
-      end_time:r.out||r.in||'00:10',
-      service_type:staffRoleCode(staff.find(s=>s.id===staffId)?.role||'hair'),
+      start_time:cleanIn||'00:00',
+      end_time:cleanOut||cleanIn||'00:10',
+      service_type:staffRoleCode(staffRow?.role||'hair'),
       service_detail:STAFF_ATTENDANCE_SERVICE,
-      customer_memo:staffAttendanceMemo({staffId,staffName,date,in:r.in,out:r.out,minutes:r.minutes}),
+      customer_memo:staffAttendanceMemo({staffId,staffName,date,in:cleanIn,out:cleanOut,minutes:cleanRecord.minutes}),
       status:'confirmed'
     };
     try{
-      if(r._rowId){
-        const res=await fetch(`${SB_URL}/rest/v1/bookings?id=eq.${r._rowId}`,{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(body)});
-        if(res.ok)return true;
-        console.warn('[attendance patch failed]',res.status,await res.text().catch(()=>''));
+      const existingRows=await findRemoteAttendanceRows(date,staffId);
+      const targetRowId=r._rowId||existingRows[0]?._rowId||'';
+      let savedRowId=targetRowId;
+      let savedCustomerId=r._customerId||existingRows.find(row=>row._rowId===targetRowId)?._customerId||existingRows[0]?._customerId||null;
+      if(targetRowId){
+        const ok=await patchAttendanceRow(targetRowId,body);
+        if(!ok)savedRowId='';
       }
-      const created=await sbPostSystemBooking(body);
-      return !!created;
+      if(!savedRowId){
+        const created=await sbPostSystemBooking(body);
+        savedRowId=created?.[0]?.id||'';
+        savedCustomerId=created?.[0]?.customer_id||savedCustomerId;
+      }
+      if(!savedRowId)return{ok:false};
+      return{ok:true,rowId:savedRowId,customerId:savedCustomerId,record:{...cleanRecord,_rowId:savedRowId,_customerId:savedCustomerId}};
     }catch(e){
       console.warn('[attendance save exception]',e);
-      return false;
+      return{ok:false};
     }
+  };
+  const queueSaveAttendance=(date,staffId,r)=>{
+    const key=attendanceKey(date,staffId);
+    const seq=(attendanceSaveSeqRef.current[key]||0)+1;
+    attendanceSaveSeqRef.current[key]=seq;
+    pendingAttendanceRef.current[key]=r;
+    if(attendanceSaveTimersRef.current[key])clearTimeout(attendanceSaveTimersRef.current[key]);
+    attendanceSaveTimersRef.current[key]=setTimeout(async()=>{
+      delete attendanceSaveTimersRef.current[key];
+      const result=await saveRemoteAttendance(date,staffId,r);
+      if(attendanceSaveSeqRef.current[key]!==seq)return;
+      if(!result?.ok)return;
+      delete pendingAttendanceRef.current[key];
+      saveAtt(prev=>{
+        const current=prev?.[date]?.[staffId]||{};
+        if(current.updatedAt&&r.updatedAt&&attendanceRecordStamp(current)>attendanceRecordStamp(r))return prev;
+        const day={...(prev?.[date]||{})};
+        day[staffId]={...current,...result.record};
+        return{...(prev||{}),[date]:day};
+      });
+    },220);
   };
   const setRec=(d,id,patch)=>{
-    const r={...rec(d,id),...patch,updatedAt:new Date().toISOString()};
+    const cleanPatch={...patch};
+    if(Object.prototype.hasOwnProperty.call(cleanPatch,'in'))cleanPatch.in=normalizeStaffTenMinuteTime(cleanPatch.in);
+    if(Object.prototype.hasOwnProperty.call(cleanPatch,'out'))cleanPatch.out=normalizeStaffTenMinuteTime(cleanPatch.out);
+    const r={...rec(d,id),...cleanPatch,date:d,staffId:id,updatedAt:new Date().toISOString()};
     r.minutes=diff(r.in,r.out);
-    saveAtt({...att,[d]:{...(att[d]||{}),[id]:r}});
-    saveRemoteAttendance(d,id,r);
+    saveAtt(prev=>({...(prev||{}),[d]:{...(prev?.[d]||{}),[id]:{...(prev?.[d]?.[id]||{}),...r}}}));
+    queueSaveAttendance(d,id,r);
+  };
+  const cancelRemoteAttendance=async(date,staffId,current={})=>{
+    try{
+      const rows=await findRemoteAttendanceRows(date,staffId);
+      const ids=[...new Set([current?._rowId,...rows.map(row=>row?._rowId)].filter(Boolean))];
+      await Promise.all(ids.map(id=>fetch(SB_URL+'/rest/v1/bookings?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify({status:'cancelled'})}).catch(e=>console.warn('[attendance clear failed]',id,e))));
+    }catch(e){
+      console.warn('[attendance clear exception]',e);
+    }
   };
   const clearRec=id=>{
+    const key=attendanceKey(viewDate,id);
     const current=rec(viewDate,id);
-    if(current?._rowId){
-      fetch(`${SB_URL}/rest/v1/bookings?id=eq.${current._rowId}`,{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify({status:'cancelled'})}).catch(()=>{});
-    }
-    const day={...(att[viewDate]||{})};delete day[id];saveAtt({...att,[viewDate]:day});
+    if(attendanceSaveTimersRef.current[key])clearTimeout(attendanceSaveTimersRef.current[key]);
+    delete attendanceSaveTimersRef.current[key];
+    delete attendanceSaveSeqRef.current[key];
+    delete pendingAttendanceRef.current[key];
+    cancelRemoteAttendance(viewDate,id,current);
+    saveAtt(prev=>{
+      const day={...(prev?.[viewDate]||{})};
+      delete day[id];
+      return{...(prev||{}),[viewDate]:day};
+    });
   };
   const saveStaffVisibility=async(staffId,bookingVisible)=>{
     if(!isUuid(staffId))return false;
@@ -3636,6 +4130,7 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
       if((!ok||!visibilityOk||!profileOk)&&isUuid(id))alert('스텝 정보가 화면에는 반영되었지만 서버 저장 일부가 실패했습니다. 새로고침 후 다시 확인해주세요.');
     }
     setForm(null);
+    if(typeof onRefreshStaff==='function')await onRefreshStaff();
   };
   const toggleStaffPermission=async row=>{
     if(!canEdit||!row?.id)return;
@@ -3662,6 +4157,7 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
       LS.set(LS_STAFF_PROFILE,profiles);
     }
     setStaff(p=>p.map(s=>s.id===row.id?{...s,...payload}:s));
+    if(typeof onRefreshStaff==='function')await onRefreshStaff();
     await notifyAdminDevices({type:'staff_permission_updated',body:`${row.name||'스텝'} 스텝 권한이 ${nextFull?'부여':'해제'}되었습니다.`,data:{url:'/admin.html',tab:'staff'},eventKey:`staff:${row.id}:permission:${nextFull?'full':'view'}:${Date.now()}`});
   };
   const deleteStaff=async id=>{
@@ -3683,47 +4179,74 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
     setConfirmDel(null);
     if(selectedStaffId===id)setSelectedStaffId(null);
     await notifyAdminDevices({type:'staff_deleted',body:`${target?.name||'스텝'} 스텝이 삭제되었습니다.`,data:{url:'/admin.html',tab:'staff'},eventKey:`staff:${id}:deleted:${Date.now()}`});
+    if(typeof onRefreshStaff==='function')await onRefreshStaff();
   };
-  const timeHours=Array.from({length:24},(_,i)=>String(i).padStart(2,'0'));
-  const timeMinutes=['00','10','20','30','40','50'];
-  const timeParts=value=>{
-    const t=toTenMinuteTime(value);
-    if(!t)return{h:'',m:''};
-    const[h,m]=t.split(':');
-    return{h,m};
+
+  const monthDates=useMemo(()=>{const [y,m]=String(viewMonth||'').split('-').map(Number);if(!y||!m)return[];const last=new Date(y,m,0).getDate();return Array.from({length:last},(_,i)=>`${y}-${String(m).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`);},[viewMonth]);
+  const monthRows=visibleStaff.map(st=>{const entries=monthDates.map(d=>{const current=att?.[d]?.[st.id]||{};const has=!!(current.in||current.out);const selectedDayOff=!has&&isStaffOff(d,st.id);const rec=has?current:{in:'',out:'',minutes:0};return{date:d,rec,off:!has,dayOffSelected:selectedDayOff};});const workEntries=entries.filter(x=>!x.off&&(x.rec?.in||x.rec?.out));const selectedOffEntries=entries.filter(x=>x.off&&x.dayOffSelected);return{staff:st,entries,total:workEntries.reduce((a,x)=>a+(Number(x.rec?.minutes)||0),0),days:workEntries.length,offDays:selectedOffEntries.length};});
+  const XL={
+    year:'\uB144',month:'\uC6D4',day:'\uC77C',hour:'\uC2DC\uAC04',minute:'\uBD84',staff:'\uC2A4\uD15D',
+    noRecords:'\uAE30\uB85D \uC5C6\uC74C',dayOff:'\uD734\uBB34',status:'\uC0C1\uD0DC',offDays:'\uD734\uBB34\uC77C\uC218',workTime:'\uADFC\uBB34\uC2DC\uAC04',workMinute:'\uADFC\uBB34\uC2DC\uAC04(\uBD84)',
+    role:'\uC9C1\uAE09',title:'\uD0C0\uC774\uD2C0',date:'\uB0A0\uC9DC',checkIn:'\uCD9C\uADFC',checkOut:'\uD1F4\uADFC',total:'\uD569\uACC4',recordDays:'\uAE30\uB85D\uC77C\uC218',
+    appTitle:'\uB204\uB204\uC544\uB204 \uC2A4\uD15D \uC6D4\uBCC4 \uADFC\uBB34\uC2DC\uAC04',
+    allTitle:'\uB204\uB204\uC544\uB204 \uC804\uCCB4 \uC2A4\uD15D \uC6D4\uBCC4 \uADFC\uBB34\uC2DC\uAC04',
+    confirmMonth:'\uD655\uC778 \uC6D4',allExcelDownload:'\uC804\uCCB4 \uC5D1\uC140 \uB2E4\uC6B4\uB85C\uB4DC',excel:'\uC5D1\uC140',
+    monthDownloadHint:'\uC120\uD0DD\uD55C \uC6D4\uC758 \uADFC\uBB34\uC2DC\uAC04\uC744 \uC2A4\uD15D\uBCC4 Excel \uD30C\uC77C\uB85C \uB0B4\uB824\uBC1B\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
+    noDownloadRecords:'\uB2E4\uC6B4\uB85C\uB4DC\uD560 \uC6D4\uBCC4 \uADFC\uBB34 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.',
+    dayRecords:'\uC77C \uAE30\uB85D',clickAttendance:'\uD074\uB9AD \uC2DC \uCD9C\uD1F4\uADFC \uCCB4\uD06C',monthTotal:'\uC6D4 \uD569\uACC4'
   };
-  const Time10Picker=({label,value,onChange})=>{
-    const{h,m}=timeParts(value);
-    const setPart=(part,next)=>{
-      const nh=part==='h'?next:h;
-      const nm=part==='m'?next:(m||'00');
-      if(!nh){onChange('');return;}
-      onChange(`${nh}:${nm||'00'}`);
-    };
-    return <div>
-      <label className="lbl">{label}</label>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-        <select className="sel" value={h} onChange={e=>setPart('h',e.target.value)} style={{height:48}}>
-          <option value="">시</option>
-          {timeHours.map(v=><option key={v} value={v}>{v}시</option>)}
-        </select>
-        <select className="sel" value={m} onChange={e=>setPart('m',e.target.value)} disabled={!h} style={{height:48,opacity:h?1:.45}}>
-          <option value="">분</option>
-          {timeMinutes.map(v=><option key={v} value={v}>{v}분</option>)}
-        </select>
-      </div>
-    </div>;
+  const excelText=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const excelFileName=v=>String(v||'').replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,'_').slice(0,80)||'staff';
+  const monthLabel=viewMonth?viewMonth.replace('-',XL.year+' ')+XL.month:'';
+  const formatExcelMinutes=m=>{m=Number(m)||0;const h=Math.floor(m/60),mm=m%60;return h?(String(h)+XL.hour+' '+String(mm)+XL.minute):(String(mm)+XL.minute);};
+  const isEarlyExcelTime=t=>{const m=String(t||'').match(/^(\d{1,2}):(\d{2})/);if(!m)return false;return ((Number(m[1])||0)*60+(Number(m[2])||0))<=6*60+20;};
+  const staffMonthlyTableHtml=row=>{
+    const entries=[...(row.entries||[])].sort((a,b)=>a.date.localeCompare(b.date));
+    const body=entries.length?entries.map(x=>{
+      if(x.off){
+        const selected=!!x.dayOffSelected;
+        return '<tr><td>'+excelText(x.date)+'</td><td class="'+(selected?'off':'')+'">'+(selected?excelText(XL.dayOff):'')+'</td><td></td><td></td><td class="num">0</td><td class="'+(selected?'off':'')+'">'+(selected?excelText(XL.dayOff):'')+'</td></tr>';
+      }
+      const inEarly=isEarlyExcelTime(x.rec?.in),outEarly=isEarlyExcelTime(x.rec?.out);
+      return '<tr><td>'+excelText(x.date)+'</td><td>'+excelText(XL.workTime)+'</td><td class="'+(inEarly?'early':'')+'">'+excelText(x.rec?.in||'-')+'</td><td class="'+(outEarly?'early':'')+'">'+excelText(x.rec?.out||'-')+'</td><td class="num">'+(Number(x.rec?.minutes)||0)+'</td><td>'+excelText(formatExcelMinutes(x.rec?.minutes))+'</td></tr>';
+    }).join(''):'<tr><td colspan="6" class="empty">'+excelText(XL.noRecords)+'</td></tr>';
+    return '<h2>'+excelText(row.staff?.name||XL.staff)+' - '+excelText(monthLabel)+' '+excelText(XL.workTime)+'</h2><div class="meta">'+excelText(XL.role)+': '+excelText(staffRoleLabel(row.staff?.role))+' / '+excelText(XL.title)+': '+excelText(row.staff?.title||staffTitleDefault(row.staff?.role))+'</div><table><thead><tr><th>'+excelText(XL.date)+'</th><th>'+excelText(XL.status)+'</th><th>'+excelText(XL.checkIn)+'</th><th>'+excelText(XL.checkOut)+'</th><th>'+excelText(XL.workMinute)+'</th><th>'+excelText(XL.workTime)+'</th></tr></thead><tbody>'+body+'</tbody><tfoot><tr><td colspan="4">'+excelText(XL.total)+'</td><td class="num">'+(Number(row.total)||0)+'</td><td>'+excelText(formatExcelMinutes(row.total))+'</td></tr><tr><td colspan="4">'+excelText(XL.recordDays)+'</td><td colspan="2">'+(Number(row.days)||0)+XL.dayRecords+'</td></tr><tr><td colspan="4">'+excelText(XL.offDays)+'</td><td colspan="2">'+(Number(row.offDays)||0)+XL.day+'</td></tr></tfoot></table>';
   };
-  const monthRows=visibleStaff.map(st=>{const entries=Object.entries(att||{}).filter(([d])=>d.startsWith(viewMonth)).map(([d,v])=>({date:d,rec:v?.[st.id]})).filter(x=>x.rec?.in||x.rec?.out);return{staff:st,entries,total:entries.reduce((a,x)=>a+(x.rec.minutes||0),0),days:entries.length};});
+  const downloadExcelHtml=(html,fileName)=>{
+    const doc='<!doctype html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,\'Malgun Gothic\',sans-serif;color:#111827}h1{font-size:22px;margin:0 0 14px}h2{font-size:18px;margin:22px 0 6px}.meta{font-size:12px;color:#4B5563;margin:0 0 8px}table{border-collapse:collapse;width:100%;margin-bottom:18px}th,td{border:1px solid #D1D5DB;padding:7px 9px;font-size:12px;white-space:nowrap}th{background:#F3F4F6;font-weight:700}tfoot td{background:#FAFAFA;font-weight:700}.num{text-align:right}.early{color:#DC2626;font-weight:700}.off{color:#EA580C;font-weight:700}.empty{text-align:center;color:#6B7280}</style></head><body>'+html+'</body></html>';
+    const blob=new Blob(['\ufeff'+doc],{type:'application/vnd.ms-excel;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=fileName.endsWith('.xls')?fileName:fileName+'.xls';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  const downloadStaffMonthlyExcel=row=>{
+    downloadExcelHtml('<h1>'+excelText(XL.appTitle)+'</h1>'+staffMonthlyTableHtml(row),'nunuanu-'+excelFileName(row.staff?.name)+'-'+viewMonth+'-worktime.xls');
+  };
+  const downloadAllStaffMonthlyExcel=()=>{
+    const rows=monthRows.filter(row=>row.entries.length>0);
+    if(!rows.length){alert(XL.noDownloadRecords);return;}
+    downloadExcelHtml('<h1>'+excelText(XL.allTitle)+' - '+excelText(monthLabel)+'</h1>'+rows.map(staffMonthlyTableHtml).join('<br/>'),'nunuanu-all-staff-'+viewMonth+'-worktime.xls');
+  };
+
 
   useEffect(()=>{
     let alive=true;
     const loadRemoteAttendance=async()=>{
-      const rows=await sbGet(`bookings?select=id,customer_id,booking_date,status,service_detail,customer_memo,created_at&service_detail=eq.${STAFF_ATTENDANCE_SERVICE}&order=booking_date.desc&limit=1000`);
-      const next={...LS.get(LS_ATT,{})};
+      const path='bookings?select=id,customer_id,booking_date,start_time,end_time,status,service_detail,customer_memo,created_at&service_detail=eq.'+encodeURIComponent(STAFF_ATTENDANCE_SERVICE)+'&order=booking_date.desc,created_at.desc&limit=2000';
+      const rows=await sbGet(path);
+      const next={};
       (rows||[]).map(parseStaffAttendanceRow).filter(Boolean).forEach(r=>{
         if(sessionStaffId&&r.staffId!==sessionStaffId)return;
-        next[r.date]={...(next[r.date]||{}),[r.staffId]:r};
+        putStaffAttendanceRecord(next,r);
+      });
+      Object.values(pendingAttendanceRef.current||{}).forEach(r=>{
+        if(sessionStaffId&&r.staffId!==sessionStaffId)return;
+        putStaffAttendanceRecord(next,r);
       });
       if(alive)saveAtt(next);
     };
@@ -3761,7 +4284,11 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
       <div style={{flex:1,minHeight:0,overflowY:'auto',overflowX:'hidden',padding:'14px 16px calc(88px + env(safe-area-inset-bottom,0px))',WebkitOverflowScrolling:'touch',overscrollBehaviorY:'contain',overscrollBehaviorX:'none',touchAction:'pan-y'}}>
         <div style={{background:T.surface,border:`1px solid ${T.line}`,borderRadius:16,padding:14,marginBottom:12,minWidth:0,maxWidth:'100%',overflow:'hidden'}}>
           <label style={{fontSize:12,fontWeight:800,color:T.ink2,display:'block',marginBottom:8}}>출퇴근 날짜</label>
-          <input type="date" value={viewDate} onChange={e=>setViewDate(e.target.value)} className="inp staff-date-input" style={{height:44,width:'100%',minWidth:0,maxWidth:'100%'}}/>
+          <div style={{height:44,width:'100%',minWidth:0,maxWidth:'100%',display:'grid',gridTemplateColumns:'44px minmax(0,1fr) 44px',alignItems:'center',border:'1px solid '+T.line,borderRadius:12,background:T.surface,overflow:'hidden'}}>
+            <button type="button" onClick={()=>shiftViewDate(-1)} aria-label="Previous day" style={{height:'100%',border:'none',borderRight:'1px solid '+T.line,background:T.bg,color:T.ink,fontSize:22,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>{'\u2039'}</button>
+            <input type="date" value={viewDate} onChange={e=>setViewDate(e.target.value)} className="inp staff-date-input" style={{height:'100%',width:'100%',minWidth:0,maxWidth:'100%',border:'none',borderRadius:0,background:T.surface,textAlign:'center',fontSize:15,fontWeight:900,color:T.ink,fontVariantNumeric:'tabular-nums',padding:'0 8px',boxShadow:'none'}}/>
+            <button type="button" onClick={()=>shiftViewDate(1)} aria-label="Next day" style={{height:'100%',border:'none',borderLeft:'1px solid '+T.line,background:T.bg,color:T.ink,fontSize:22,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>{'\u203A'}</button>
+          </div>
           <div style={{fontSize:12,color:T.ink3,marginTop:8}}>출근/퇴근 체크를 누르면 현재 시간이 자동 기록됩니다.</div>
         </div>
 
@@ -3782,8 +4309,8 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
             {(r.in||r.out)&&<button onClick={()=>clearRec(selectedStaff.id)} style={{height:34,padding:'0 10px',borderRadius:10,border:'1px solid #FECACA',background:'#FEF2F2',color:T.danger,fontSize:12,fontWeight:800}}>기록 삭제</button>}
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            <Time10Picker label="출근 시간" value={r.in||''} onChange={v=>setRec(viewDate,selectedStaff.id,{in:v})}/>
-            <Time10Picker label="퇴근 시간" value={r.out||''} onChange={v=>setRec(viewDate,selectedStaff.id,{out:v})}/>
+            <StaffTime10Picker label="출근 시간" value={r.in||''} defaultTime={nowTime()} onChange={v=>setRec(viewDate,selectedStaff.id,{in:v})}/>
+            <StaffTime10Picker label="퇴근 시간" value={r.out||''} defaultTime={nowTime()} onChange={v=>setRec(viewDate,selectedStaff.id,{out:v})}/>
             <button onClick={()=>setRec(viewDate,selectedStaff.id,{in:nowTime()})} style={{height:50,borderRadius:12,border:'none',background:'#DCFCE7',color:'#166534',fontSize:15,fontWeight:900}}>출근 체크</button>
             <button onClick={()=>setRec(viewDate,selectedStaff.id,{out:nowTime()})} style={{height:50,borderRadius:12,border:'none',background:'#DBEAFE',color:'#1E40AF',fontSize:15,fontWeight:900}}>퇴근 체크</button>
           </div>
@@ -3814,7 +4341,11 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
       {mode==='daily'&&<>
         <div style={{background:T.surface,border:`1px solid ${T.line}`,borderRadius:16,padding:14,marginBottom:12,minWidth:0,maxWidth:'100%',overflow:'hidden'}}>
           <label style={{fontSize:12,fontWeight:800,color:T.ink2,display:'block',marginBottom:8}}>확인 날짜</label>
-          <input type="date" value={viewDate} onChange={e=>setViewDate(e.target.value)} className="inp staff-date-input" style={{height:44,width:'100%',minWidth:0,maxWidth:'100%'}}/>
+          <div style={{height:44,width:'100%',minWidth:0,maxWidth:'100%',display:'grid',gridTemplateColumns:'44px minmax(0,1fr) 44px',alignItems:'center',border:'1px solid '+T.line,borderRadius:12,background:T.surface,overflow:'hidden'}}>
+            <button type="button" onClick={()=>shiftViewDate(-1)} aria-label="Previous day" style={{height:'100%',border:'none',borderRight:'1px solid '+T.line,background:T.bg,color:T.ink,fontSize:22,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>{'\u2039'}</button>
+            <input type="date" value={viewDate} onChange={e=>setViewDate(e.target.value)} className="inp staff-date-input" style={{height:'100%',width:'100%',minWidth:0,maxWidth:'100%',border:'none',borderRadius:0,background:T.surface,textAlign:'center',fontSize:15,fontWeight:900,color:T.ink,fontVariantNumeric:'tabular-nums',padding:'0 8px',boxShadow:'none'}}/>
+            <button type="button" onClick={()=>shiftViewDate(1)} aria-label="Next day" style={{height:'100%',border:'none',borderLeft:'1px solid '+T.line,background:T.bg,color:T.ink,fontSize:22,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>{'\u203A'}</button>
+          </div>
           <div style={{fontSize:12,color:T.ink3,marginTop:8}}>{canEdit?'스텝 이름을 클릭하면 해당 스텝의 출퇴근 체크 페이지가 열립니다.':'본인 출퇴근 기록만 확인하고 체크할 수 있습니다.'}</div>
         </div>
         {visibleStaff.map(s=>{const r=rec(viewDate,s.id),work=r.minutes||0,fullPerm=staffHasFullPermission(s),off=isStaffOff(viewDate,s.id);return <div key={s.id} style={{background:off?'#FFFBEB':T.surface,borderRadius:16,border:`1px solid ${off?'#FDE68A':T.line}`,overflow:'hidden',overflowX:'hidden',marginBottom:10,maxWidth:'100%'}}>
@@ -3849,22 +4380,50 @@ function StaffScreen({staff,setStaff,blocks,canEdit=true,sessionStaffId=null,sta
         </div>;})}
       </>}
       {mode==='monthly'&&<>
-        <div style={{background:T.surface,border:`1px solid ${T.line}`,borderRadius:16,padding:14,marginBottom:12,minWidth:0,maxWidth:'100%',overflow:'hidden'}}><label style={{fontSize:12,fontWeight:800,color:T.ink2,display:'block',marginBottom:8}}>확인 월</label><input type="month" value={viewMonth} onChange={e=>setViewMonth(e.target.value)} className="inp" style={{height:44,width:'100%',minWidth:0,maxWidth:'100%'}}/></div>
-        {monthRows.map(row=><div key={row.staff.id} style={{background:T.surface,border:`1px solid ${T.line}`,borderRadius:16,overflow:'hidden',overflowX:'hidden',marginBottom:10,maxWidth:'100%'}}>
-          <button onClick={()=>setSelectedStaffId(row.staff.id)} style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'14px 16px',border:'none',borderBottom:`1px solid ${T.line2}`,background:'transparent',textAlign:'left',cursor:'pointer',minWidth:0,overflow:'hidden'}}>
-            <Avatar name={row.staff.name} color={row.staff.color} size={42}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:16,fontWeight:900,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{row.staff.name}</div>
-              <div style={{fontSize:12,color:T.ink2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{row.days}일 기록 · 클릭 시 출퇴근 체크</div>
+        <div style={{background:T.surface,border:'1px solid '+T.line,borderRadius:16,padding:14,marginBottom:12,minWidth:0,maxWidth:'100%',overflow:'hidden'}}>
+          <div style={{display:'flex',alignItems:'flex-end',gap:10,flexWrap:'wrap'}}>
+            <div style={{flex:'1 1 190px',minWidth:0}}>
+              <label style={{fontSize:12,fontWeight:800,color:T.ink2,display:'block',marginBottom:8}}>{XL.confirmMonth}</label>
+              <div style={{height:44,width:'100%',minWidth:0,maxWidth:'100%',display:'grid',gridTemplateColumns:'44px minmax(0,1fr) 44px',alignItems:'center',border:'1px solid '+T.line,borderRadius:12,background:T.surface,overflow:'hidden'}}>
+                <button type="button" onClick={()=>shiftViewMonth(-1)} aria-label="?? ?" style={{height:'100%',border:'none',borderRight:'1px solid '+T.line,background:T.bg,color:T.ink,fontSize:22,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>{'\u2039'}</button>
+                <input type="month" value={viewMonth} onChange={e=>setViewMonth(e.target.value)} className="inp" style={{height:'100%',width:'100%',minWidth:0,maxWidth:'100%',border:'none',borderRadius:0,background:T.surface,textAlign:'center',fontSize:15,fontWeight:900,color:T.ink,fontVariantNumeric:'tabular-nums',padding:'0 8px',boxShadow:'none'}}/>
+                <button type="button" onClick={()=>shiftViewMonth(1)} aria-label="?? ?" style={{height:'100%',border:'none',borderLeft:'1px solid '+T.line,background:T.bg,color:T.ink,fontSize:22,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>{'\u203A'}</button>
+              </div>
             </div>
-            <div style={{textAlign:'right',flexShrink:0}}>
-              <div style={{fontSize:12,color:T.ink2,fontWeight:800}}>월 합계</div>
-              <div style={{fontSize:18,fontWeight:900,color:T.ink,whiteSpace:'nowrap'}}>{fmt(row.total)}</div>
-            </div>
-            <div style={{fontSize:18,color:T.ink3}}>›</div>
-          </button>
-          {row.entries.length===0?<div style={{padding:'14px 16px',fontSize:13,color:T.ink3}}>기록 없음</div>:row.entries.sort((a,b)=>a.date.localeCompare(b.date)).map((x,i)=><div key={x.date} style={{display:'grid',gridTemplateColumns:'minmax(42px,.75fr) minmax(40px,.7fr) minmax(40px,.7fr) minmax(58px,.95fr)',gap:5,padding:'10px 12px',borderBottom:i<row.entries.length-1?`1px solid ${T.line2}`:'none',fontSize:12,alignItems:'center',minWidth:0,maxWidth:'100%',overflow:'hidden'}}><div style={{fontWeight:800,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{x.date.slice(5)}</div><div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{x.rec.in||'-'}</div><div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{x.rec.out||'-'}</div><div style={{fontWeight:900,textAlign:'right',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{fmt(x.rec.minutes)}</div></div>)}
-        </div>)}
+            <button type="button" onClick={downloadAllStaffMonthlyExcel} disabled={!monthRows.some(row=>row.entries.length>0)} style={{height:44,padding:'0 14px',borderRadius:12,border:'none',background:monthRows.some(row=>row.entries.length>0)?T.ink:T.line,color:monthRows.some(row=>row.entries.length>0)?'#fff':T.ink3,fontSize:13,fontWeight:900,cursor:monthRows.some(row=>row.entries.length>0)?'pointer':'default',whiteSpace:'nowrap',flexShrink:0}}>{XL.allExcelDownload}</button>
+          </div>
+          <div style={{fontSize:12,color:T.ink3,marginTop:8}}>{XL.monthDownloadHint}</div>
+        </div>
+        {monthRows.map(row=>{const isExpanded=!!expandedMonthlyStaff[row.staff.id];return <div key={row.staff.id} style={{background:T.surface,border:'1px solid '+T.line,borderRadius:16,overflow:'hidden',overflowX:'hidden',marginBottom:10,maxWidth:'100%'}}>
+          <div style={{display:'flex',alignItems:'stretch',borderBottom:isExpanded?'1px solid '+T.line2:'none',minWidth:0}}>
+            <button type="button" onClick={()=>toggleMonthlyStaff(row.staff.id)} aria-expanded={isExpanded} style={{flex:1,display:'flex',alignItems:'center',gap:12,padding:'14px 16px',border:'none',background:'transparent',textAlign:'left',cursor:'pointer',minWidth:0,overflow:'hidden'}}>
+              <Avatar name={row.staff.name} color={row.staff.color} size={42}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:7,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:900,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{row.staff.name}</div>
+                  <span style={{width:22,height:22,borderRadius:999,background:T.line2,color:T.ink2,fontSize:13,fontWeight:900,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0,lineHeight:1}}>{isExpanded?'\u25B4':'\u25BE'}</span>
+                </div>
+                <div style={{fontSize:12,color:T.ink2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginTop:2}}>{row.days}{XL.dayRecords} {'\u00B7'} <span style={{color:'#EA580C',fontWeight:900}}>{row.offDays}{XL.day} {XL.dayOff}</span> {'\u00B7'} {XL.clickAttendance}</div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <div style={{fontSize:12,color:T.ink2,fontWeight:800}}>{XL.monthTotal}</div>
+                <div style={{fontSize:18,fontWeight:900,color:T.ink,whiteSpace:'nowrap'}}>{fmt(row.total)}</div>
+              </div>
+            </button>
+            <button type="button" onClick={e=>{e.stopPropagation();downloadStaffMonthlyExcel(row);}} disabled={!row.entries.length} style={{alignSelf:'center',height:36,marginRight:12,padding:'0 11px',borderRadius:10,border:'1px solid '+(row.entries.length?T.ink:T.line),background:row.entries.length?T.surface:T.bg,color:row.entries.length?T.ink:T.ink3,fontSize:12,fontWeight:900,cursor:row.entries.length?'pointer':'default',whiteSpace:'nowrap',flexShrink:0}}>{XL.excel}</button>
+          </div>
+          {isExpanded&&(row.entries.length===0?<div style={{padding:'14px 16px',fontSize:13,color:T.ink3}}>{XL.noRecords}</div>:row.entries.sort((a,b)=>a.date.localeCompare(b.date)).map((x,i)=>{const canSelectDayOff=x.off&&canToggleDayOff;const selectedDayOff=x.off&&x.dayOffSelected;return <div key={x.date} style={{display:'grid',gridTemplateColumns:'minmax(42px,.7fr) minmax(58px,.85fr) minmax(40px,.65fr) minmax(40px,.65fr) minmax(58px,.9fr)',gap:5,padding:'10px 12px',borderBottom:i<row.entries.length-1?'1px solid '+T.line2:'none',fontSize:12,alignItems:'center',minWidth:0,maxWidth:'100%',overflow:'hidden'}}>
+            <div style={{fontWeight:800,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{x.date.slice(5)}</div>
+            <button type="button" disabled={!canSelectDayOff} onClick={e=>{e.stopPropagation();if(canSelectDayOff)toggleStaffDayOff(x.date,row.staff);}} style={{height:28,borderRadius:9,border:'1px solid '+(selectedDayOff?'#EA580C':T.line),background:selectedDayOff?'#EA580C':T.surface,color:selectedDayOff?'#fff':T.ink3,fontSize:11,fontWeight:900,cursor:canSelectDayOff?'pointer':'default',opacity:x.off?1:.38,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0,padding:'0 7px'}}>{XL.dayOff}</button>
+            {x.off?<>
+              <div style={{gridColumn:'3 / 6',height:1,minWidth:0}}/>
+            </>:<>
+              <div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0,...earlyAttendanceTimeStyle(x.rec.in)}}>{x.rec.in||'-'}</div>
+              <div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0,...earlyAttendanceTimeStyle(x.rec.out)}}>{x.rec.out||'-'}</div>
+              <div style={{fontWeight:900,textAlign:'right',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{fmt(x.rec.minutes)}</div>
+            </>}
+          </div>}))}
+        </div>;})}
       </>}
     </div>
     {form&&<StaffForm initial={form.mode==='edit'?form.staff:null} usedColors={form.mode==='add'?usedColors:usedColors.filter(c=>c!==form.staff.color)} onSave={saveStaff} onClose={()=>setForm(null)}/>}
@@ -3955,6 +4514,32 @@ function CustomerScreen({supaCustomers,supaHistory,onRefresh,canEdit=true}){
     }
   }
 
+  async function syncCustomerBookingDisplay(customerId,patch){
+    if(!customerId)return true;
+    const rows=visibleBookings.filter(b=>b.customer_id===customerId&&!isSystemBooking(b)&&!bookingAdminDeleted(b));
+    if(!rows.length)return true;
+    const results=await Promise.all(rows.map(async b=>{
+      try{
+        const nextMemo=withBookingCustomerOverrideMemo(b.customer_memo||'',{
+          name:patch.name||bookingCustomerName(b,''),
+          phone:patch.phone||bookingCustomerPhone(b),
+          customer_id:customerId
+        });
+        const r=await fetch(`${SB_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(b.id)}&customer_id=eq.${encodeURIComponent(customerId)}`,{
+          method:'PATCH',
+          headers:{...SB_HDR,'Prefer':'return=minimal'},
+          body:JSON.stringify({customer_memo:nextMemo})
+        });
+        if(!r.ok)console.warn('[customer booking display sync failed]',b.id,r.status,await r.text().catch(()=>''));
+        return r.ok;
+      }catch(e){
+        console.warn('[customer booking display sync exception]',b.id,e);
+        return false;
+      }
+    }));
+    return results.every(Boolean);
+  }
+
   async function upsertCustomerMeta(customer,patch){
     const metaRow=customerMetaById.get(customer.id)?.row||customer._metaRow;
     const base=metaRow||customer;
@@ -4043,6 +4628,7 @@ function CustomerScreen({supaCustomers,supaHistory,onRefresh,canEdit=true}){
       return false;
     }
     const metaOk=await upsertCustomerMeta(editForm.customer,metaPatch);
+    const bookingSyncOk=await syncCustomerBookingDisplay(customerId,metaPatch);
 
     if(patchOk){
       await onRefresh();
@@ -4051,12 +4637,13 @@ function CustomerScreen({supaCustomers,supaHistory,onRefresh,canEdit=true}){
         setDetail({...detail,name,phone,memo,customerNo:customerNumber(editForm.customer)});
       }
       setMemoEdit(memo);
-      setNotice({type:'ok',text:'고객 정보가 수정되었습니다.'});
+      setNotice(bookingSyncOk?{type:'ok',text:'고객 정보가 수정되었습니다.'}:{type:'err',text:'고객 정보는 저장됐지만 예약 표시 동기화에 실패했습니다. 다시 한 번 저장해주세요.'});
     }else{
-      setNotice({type:'err',text:'고객 정보 수정에 실패했습니다. 다시 시도해주세요.'});
+      setNotice({type:'err',text:'고객 정보 저장에 실패했습니다. 다시 시도해주세요.'});
     }
     setSavingEdit(false);
     if(!metaOk)console.warn('[customer meta sync failed after customer row patch]',customerId);
+    if(!bookingSyncOk)console.warn('[customer booking display sync failed after customer row patch]',customerId);
     return patchOk;
   }
 
@@ -4511,7 +5098,7 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
               staffId:a.staffId||a.staff_id,
               label:a.label||'',
               role:a.role||'',
-              dur:10
+              dur:5
             }))
             .filter(s=>s.staffId);
           if(assignedSegs.length)initialSegs=fitSegsToDuration(assignedSegs,totalDur);
@@ -4547,7 +5134,7 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
     setEditSegs(prev=>prev.length?fitSegsToDuration(prev,totalDur):prev);
   },[mode,editStart,editEnd]);
 
-  function closeDetail(){setSelected(null);setMode('view');editDurationRef.current=null;}
+  function closeDetail(){resetMobileKeyboardViewport();setSelected(null);setMode('view');editDurationRef.current=null;}
 
   const handleConfirm=async()=>{
     if(busy)return;
@@ -4768,16 +5355,10 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
                 const w=editSegs.filter(s=>s.staffId!==id);
                 if(!w.length){setEditSegs([]);return;}
                 setEditSegs(w.map((s,i)=>i===w.length-1?{...s,dur:s.dur+ex.dur}:s));
-              } else if(editSegs.length<3){
+              } else if(editSegs.length<staffAssignmentLimit(totalDur,SEG_MIN)){
                 const stf=safeStaff.find(s=>s.id===id);
                 const label=staffSegmentServiceCode({staffId:id},stf);
-                if(!editSegs.length){setEditSegs([{staffId:id,label,dur:totalDur}]);}
-                else{
-                  const last=editSegs[editSegs.length-1];
-                  const take=Math.min(20,Math.max(SEG_MIN,Math.floor(last.dur/2/SEG_STEP)*SEG_STEP));
-                  const newDur=Math.max(SEG_MIN,last.dur-take);
-                  setEditSegs([...editSegs.slice(0,-1),{...last,dur:newDur},{staffId:id,label,dur:take}]);
-                }
+                setEditSegs(addStaffSegWithSplit(editSegs,{staffId:id,label},totalDur,SEG_STEP,SEG_MIN));
               }
             };
 
@@ -4799,15 +5380,15 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
                   <input type="date" value={editDate} onChange={e=>setEditDate(e.target.value)}
                     style={{height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 12px',fontSize:14,width:'100%',outline:'none'}}/>
                 </div>
-                <div className="booking-edit-time-row" style={{display:'flex',gap:10}}>
+                <div className="booking-edit-time-row" style={{display:'flex',gap:14}}>
                   <div style={{flex:1}}>
                     <label style={{fontSize:11,fontWeight:700,color:T.ink2,display:'block',marginBottom:4}}>시술 시작</label>
-                    <input type="time" value={editStart} onChange={e=>setEditStart(e.target.value)}
+                    <input className="booking-edit-time-input" type="time" value={editStart} onChange={e=>setEditStart(e.target.value)}
                       style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 10px',fontSize:14,outline:'none'}}/>
                   </div>
                   <div style={{flex:1}}>
                     <label style={{fontSize:11,fontWeight:700,color:T.ink2,display:'block',marginBottom:4}}>나가셔야 하는 시간</label>
-                    <input type="time" value={editEnd} onChange={e=>setEditEnd(e.target.value)}
+                    <input className="booking-edit-time-input" type="time" value={editEnd} onChange={e=>setEditEnd(e.target.value)}
                       style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 10px',fontSize:14,outline:'none'}}/>
                   </div>
                 </div>
@@ -4824,24 +5405,23 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
                 </div>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:T.ink2,display:'block',marginBottom:4}}>메모</label>
-                  <input value={editDetail} onChange={e=>setEditDetail(e.target.value)} placeholder="메모 입력"
-                    style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 12px',fontSize:14,outline:'none'}}/>
+                  <textarea value={editDetail} onChange={e=>{setEditDetail(e.target.value);autoGrowMemoTextarea(e);}} onInput={autoGrowMemoTextarea} onBlur={handleMemoTextareaBlur} ref={autoGrowMemoTextarea} rows={2} placeholder="메모 입력" style={{width:'100%',minHeight:58,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'12px',fontSize:14,lineHeight:1.45,outline:'none',resize:'none',overflow:'hidden',whiteSpace:'pre-wrap',wordBreak:'break-word',boxSizing:'border-box'}}/>
                 </div>
 
 
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:T.ink2,display:'block',marginBottom:6}}>
-                    담당 스텝 배정 <span style={{color:T.ink3,fontWeight:500}}>(최대 3명, 순서 배정 가능)</span>
+                    담당 스텝 배정 <span style={{color:T.ink3,fontWeight:500}}>(최대 5명, 순서 배정 가능)</span>
                   </label>
                   <div className="booking-edit-staff-wrap" style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap'}}>
                     {safeStaff.filter(s=>s.is_active).map(s=>{
                       const idx=editSegs.findIndex(x=>x.staffId===s.id);
                       const sel=idx>=0;
-                      return <button key={s.id} onClick={()=>toggleStaff(s.id)} disabled={!sel&&editSegs.length>=3}
-                        style={{flex:'0 0 auto',minWidth:70,padding:'8px 10px',borderRadius:10,cursor:sel||editSegs.length<3?'pointer':'not-allowed',
+                      return <button key={s.id} onClick={()=>toggleStaff(s.id)} disabled={!sel&&editSegs.length>=staffAssignmentLimit(totalDur,SEG_MIN)}
+                        style={{flex:'0 0 auto',minWidth:70,padding:'8px 10px',borderRadius:10,cursor:sel||editSegs.length<staffAssignmentLimit(totalDur,SEG_MIN)?'pointer':'not-allowed',
                           border:sel?`2px solid ${T.ink}`:`1px solid ${T.line}`,
                           background:sel?T.line2:T.surface,display:'flex',flexDirection:'column',alignItems:'center',gap:3,
-                          opacity:!sel&&editSegs.length>=3?0.4:1}}>
+                          opacity:!sel&&editSegs.length>=staffAssignmentLimit(totalDur,SEG_MIN)?0.4:1}}>
                         <div style={{width:28,height:28,borderRadius:'50%',background:s.color,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>{s.name[0]}</div>
                         <div style={{fontSize:11,fontWeight:700}}>{s.name}</div>
                         {sel&&<Chip color="dark" size="xs">#{idx+1}</Chip>}
@@ -4941,7 +5521,7 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
             const segsValid=editSegs.length>=1&&remaining===0;
             const canConfirm=editDate&&editStart&&editEnd&&editService&&segsValid;
             return <div style={{display:'flex',gap:10}}>
-              <button onClick={()=>setMode('view')}
+              <button onClick={()=>{resetMobileKeyboardViewport();setMode('view');}}
                 style={{flex:1,height:54,borderRadius:14,border:`1.5px solid ${T.line}`,background:T.surface,fontSize:14,fontWeight:600,cursor:'pointer'}}>
                 취소
               </button>
@@ -4954,7 +5534,7 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
 
           {/* REJECT */}
           {canEdit&&mode==='reject'&&<div style={{display:'flex',gap:10}}>
-            <button onClick={()=>setMode('view')}
+            <button onClick={()=>{resetMobileKeyboardViewport();setMode('view');}}
               style={{flex:1,height:54,borderRadius:14,border:`1.5px solid ${T.line}`,background:T.surface,fontSize:14,fontWeight:600,cursor:'pointer'}}>
               취소
             </button>
@@ -4970,7 +5550,7 @@ function InboxScreen({allPending,staff,onConfirm,onReject,onCancelApprove,onCanc
   </div>;
 }
 
-function ScheduleBookingEditSheet({booking,staff,onClose,onSave,onDelete}){
+function ScheduleBookingEditSheet({booking,staff,onClose,onBack,onDismiss,onSave,onDelete}){
   const safeStaff=Array.isArray(staff)?staff:[];
   const SEG_STEP=5,SEG_MIN=5;
   const calcDuration=(start,end)=>{
@@ -4986,23 +5566,31 @@ function ScheduleBookingEditSheet({booking,staff,onClose,onSave,onDelete}){
   const [editCustomerName,setEditCustomerName]=useState(bookingCustomerName(booking,''));
   const [editCustomerPhone,setEditCustomerPhone]=useState(bookingCustomerPhone(booking));
   const adminDisplay=bookingAdminDisplay(booking);
+  const editDateLabel=(()=>{
+    const [y,m,d]=String(editDate||'').split('-').map(v=>Number(v));
+    return y&&m&&d?String(y)+'. '+String(m)+'. '+String(d)+'.':'날짜 선택';
+  })();
   const [editSegs,setEditSegs]=useState(()=>{
     const total=calcDuration((booking?.start_time||'09:00').slice(0,5),(booking?.end_time||'10:00').slice(0,5));
     let segs=[];
     try{
       const raw=typeof booking?.staff_sequence==='string'?JSON.parse(booking.staff_sequence):booking?.staff_sequence;
-      if(Array.isArray(raw))segs=raw.map(seg=>({staffId:seg.staffId||seg.staff_id,label:seg.label||'',role:seg.role||'',dur:Number(seg.dur)||10})).filter(s=>s.staffId);
+      if(Array.isArray(raw))segs=raw.map(seg=>({staffId:seg.staffId||seg.staff_id,label:seg.label||'',role:seg.role||'',dur:Number(seg.dur)||5})).filter(s=>s.staffId);
     }catch{}
     if(!segs.length&&booking?.assigned_staff){
       try{
         const raw=typeof booking.assigned_staff==='string'?JSON.parse(booking.assigned_staff):booking.assigned_staff;
-        if(Array.isArray(raw))segs=raw.map(seg=>({staffId:seg.staff_id||seg.staffId,label:seg.label||'',role:seg.role||'',dur:10})).filter(s=>s.staffId);
+        if(Array.isArray(raw))segs=raw.map(seg=>({staffId:seg.staff_id||seg.staffId,label:seg.label||'',role:seg.role||'',dur:5})).filter(s=>s.staffId);
       }catch{}
     }
     if(!segs.length&&booking?.requested_staff_id)segs=[{staffId:booking.requested_staff_id,label:'',dur:total}];
     return fitStaffSegsToDuration(segs,total,SEG_STEP,SEG_MIN);
   });
   const durationRef=useRef(calcDuration(editStart,editEnd));
+
+  useEffect(()=>()=>resetMobileKeyboardViewport(),[]);
+  const backSheet=()=>{resetMobileKeyboardViewport();(onBack||onClose)?.();};
+  const closeSheet=()=>{resetMobileKeyboardViewport();(onDismiss||onClose)?.();};
 
   useEffect(()=>{
     const total=calcDuration(editStart,editEnd);
@@ -5024,16 +5612,10 @@ function ScheduleBookingEditSheet({booking,staff,onClose,onSave,onDelete}){
       const w=editSegs.filter(s=>s.staffId!==id);
       if(!w.length){setEditSegs([]);return;}
       setEditSegs(fitStaffSegsToDuration(w,totalDur,SEG_STEP,SEG_MIN));
-    }else if(editSegs.length<3){
+    }else if(editSegs.length<staffAssignmentLimit(totalDur,SEG_MIN)){
       const stf=safeStaff.find(s=>s.id===id);
       const label=staffSegmentServiceCode({staffId:id},stf);
-      if(!editSegs.length)setEditSegs([{staffId:id,label,dur:totalDur}]);
-      else{
-        const last=editSegs[editSegs.length-1];
-        const take=Math.min(20,Math.max(SEG_MIN,Math.floor(last.dur/2/SEG_STEP)*SEG_STEP));
-        const newDur=Math.max(SEG_MIN,last.dur-take);
-        setEditSegs([...editSegs.slice(0,-1),{...last,dur:newDur},{staffId:id,label,dur:take}]);
-      }
+      setEditSegs(addStaffSegWithSplit(editSegs,{staffId:id,label},totalDur,SEG_STEP,SEG_MIN));
     }
   };
   const adjustSeg=(idx,delta)=>{
@@ -5064,24 +5646,27 @@ function ScheduleBookingEditSheet({booking,staff,onClose,onSave,onDelete}){
       staff_sequence:finalSegs
     };
     await onSave(updates,{finalSegs,customerName:editCustomerName.trim(),customerPhone:editCustomerPhone.trim()});
+    resetMobileKeyboardViewport();
     setBusy(false);
   };
   const submitDelete=async()=>{
     if(!onDelete||busy)return;
     setBusy(true);
     const ok=await onDelete();
+    if(ok)resetMobileKeyboardViewport();
     if(!ok)setBusy(false);
   };
 
   return <>
-    <div onClick={busy?undefined:onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:50}}/>
-    <div className="booking-edit-sheet" style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:'min(460px,94vw)',maxHeight:'90dvh',background:T.surface,borderRadius:22,zIndex:51,boxShadow:'0 24px 80px rgba(0,0,0,.28)',display:'flex',flexDirection:'column',overflow:'hidden',animation:'popIn .2s'}}>
-      <div style={{padding:'18px 20px 12px',borderBottom:`1px solid ${T.line2}`,display:'flex',alignItems:'center',gap:12}}>
-        <div style={{flex:1}}>
+    <div onClick={busy?undefined:closeSheet} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:150}}/>
+    <div className="booking-edit-sheet" style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:'min(460px,94vw)',maxHeight:'90dvh',background:T.surface,borderRadius:22,zIndex:151,boxShadow:'0 24px 80px rgba(0,0,0,.28)',display:'flex',flexDirection:'column',overflow:'hidden',animation:'popIn .2s'}}>
+      <div style={{padding:'18px 20px 12px',borderBottom:`1px solid ${T.line2}`,display:'flex',alignItems:'center',gap:10}}>
+        {onBack&&<button onClick={backSheet} disabled={busy} aria-label="이전 화면" style={{width:36,height:36,borderRadius:'50%',border:`1px solid ${T.line}`,background:T.surface,color:T.ink,fontSize:24,fontWeight:900,cursor:busy?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>‹</button>}
+        <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:18,fontWeight:900}}>예약 수정</div>
-          <div style={{fontSize:12,color:T.ink2,marginTop:3}}>{bookingCustomerName(booking,'고객')} · 요청함 수정과 동일한 설정</div>
+          <div style={{fontSize:12,color:T.ink2,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{bookingCustomerName(booking,'고객')} · 요청함 수정과 동일한 설정</div>
         </div>
-        <button onClick={onClose} disabled={busy} style={{width:34,height:34,borderRadius:'50%',border:'none',background:T.line2,color:T.ink2,fontSize:18,fontWeight:800,cursor:busy?'default':'pointer'}}>×</button>
+        <button onClick={closeSheet} disabled={busy} aria-label="닫기" style={{width:36,height:36,borderRadius:'50%',border:'none',background:T.line2,color:T.ink2,fontSize:18,fontWeight:800,cursor:busy?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>
       </div>
         <div className="booking-edit-body" style={{padding:20,overflowY:'auto',overflowX:'hidden',display:'flex',flexDirection:'column',gap:13}}>
         <div className="booking-edit-two-col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
@@ -5094,18 +5679,21 @@ function ScheduleBookingEditSheet({booking,staff,onClose,onSave,onDelete}){
             <input value={editCustomerPhone} onChange={e=>setEditCustomerPhone(e.target.value)} placeholder="010-0000-0000" style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 12px',fontSize:14,outline:'none'}}/>
           </div>
         </div>
-        <div>
+                <div className="booking-edit-date-field">
           <label style={{fontSize:11,fontWeight:800,color:T.ink2,display:'block',marginBottom:5}}>날짜</label>
-          <input type="date" value={editDate} onChange={e=>setEditDate(e.target.value)} style={{height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 12px',fontSize:14,width:'100%',outline:'none'}}/>
+          <label className="booking-edit-date-box">
+            <span>{editDateLabel}</span>
+            <input className="booking-edit-date-input" type="date" value={editDate} onChange={e=>setEditDate(e.target.value)} aria-label="날짜 선택"/>
+          </label>
         </div>
-        <div className="booking-edit-time-row" style={{display:'flex',gap:10}}>
+        <div className="booking-edit-time-row" style={{display:'flex',gap:14}}>
           <div style={{flex:1}}>
             <label style={{fontSize:11,fontWeight:800,color:T.ink2,display:'block',marginBottom:5}}>시술 시작</label>
-            <input type="time" value={editStart} onChange={e=>setEditStart(e.target.value)} style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 10px',fontSize:14,outline:'none'}}/>
+            <input className="booking-edit-time-input" type="time" value={editStart} onChange={e=>setEditStart(e.target.value)} style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 10px',fontSize:14,outline:'none'}}/>
           </div>
           <div style={{flex:1}}>
             <label style={{fontSize:11,fontWeight:800,color:T.ink2,display:'block',marginBottom:5}}>나가셔야 하는 시간</label>
-            <input type="time" value={editEnd} onChange={e=>setEditEnd(e.target.value)} style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 10px',fontSize:14,outline:'none'}}/>
+            <input className="booking-edit-time-input" type="time" value={editEnd} onChange={e=>setEditEnd(e.target.value)} style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 10px',fontSize:14,outline:'none'}}/>
           </div>
         </div>
         <div style={{padding:'10px 12px',background:T.bg,borderRadius:12,border:`1px solid ${T.line}`,fontSize:12,fontWeight:700,color:T.ink2}}>
@@ -5119,16 +5707,16 @@ function ScheduleBookingEditSheet({booking,staff,onClose,onSave,onDelete}){
         </div>
         <div>
           <label style={{fontSize:11,fontWeight:800,color:T.ink2,display:'block',marginBottom:5}}>메모</label>
-          <input value={editDetail} onChange={e=>setEditDetail(e.target.value)} placeholder="메모 입력" style={{width:'100%',height:44,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'0 12px',fontSize:14,outline:'none'}}/>
+          <textarea value={editDetail} onChange={e=>{setEditDetail(e.target.value);autoGrowMemoTextarea(e);}} onInput={autoGrowMemoTextarea} onBlur={handleMemoTextareaBlur} ref={autoGrowMemoTextarea} rows={2} placeholder="메모 입력" style={{width:'100%',minHeight:58,borderRadius:12,border:`1.5px solid ${T.line}`,padding:'12px',fontSize:14,lineHeight:1.45,outline:'none',resize:'none',overflow:'hidden',whiteSpace:'pre-wrap',wordBreak:'break-word',boxSizing:'border-box'}}/>
         </div>
         {adminDisplay&&<div style={{padding:'11px 12px',background:T.bg,border:`1px solid ${T.line}`,borderRadius:12}}>
           <div style={{fontSize:11,fontWeight:900,color:T.ink2,marginBottom:6}}>관리자</div>
           <div style={{fontSize:12,fontWeight:700,color:T.ink,lineHeight:1.5,whiteSpace:'pre-line',wordBreak:'break-word'}}>{adminDisplay}</div>
         </div>}
         <div>
-          <label style={{fontSize:11,fontWeight:800,color:T.ink2,display:'block',marginBottom:7}}>담당 스텝 배정 <span style={{color:T.ink3,fontWeight:600}}>(최대 3명, 선택 순서대로 진행)</span></label>
+          <label style={{fontSize:11,fontWeight:800,color:T.ink2,display:'block',marginBottom:7}}>담당 스텝 배정 <span style={{color:T.ink3,fontWeight:600}}>(최대 5명, 선택 순서대로 진행)</span></label>
           <div className="booking-edit-staff-wrap" style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap'}}>
-            {safeStaff.filter(s=>s.is_active!==false).map(s=>{const idx=editSegs.findIndex(x=>x.staffId===s.id),sel=idx>=0;return <button key={s.id} onClick={()=>toggleStaff(s.id)} disabled={!sel&&editSegs.length>=3} style={{flex:'0 0 auto',minWidth:70,padding:'8px 10px',borderRadius:10,cursor:sel||editSegs.length<3?'pointer':'not-allowed',border:sel?`2px solid ${T.ink}`:`1px solid ${T.line}`,background:sel?T.line2:T.surface,display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!sel&&editSegs.length>=3?0.4:1}}>
+            {safeStaff.filter(s=>s.is_active!==false).map(s=>{const idx=editSegs.findIndex(x=>x.staffId===s.id),sel=idx>=0;return <button key={s.id} onClick={()=>toggleStaff(s.id)} disabled={!sel&&editSegs.length>=staffAssignmentLimit(totalDur,SEG_MIN)} style={{flex:'0 0 auto',minWidth:70,padding:'8px 10px',borderRadius:10,cursor:sel||editSegs.length<staffAssignmentLimit(totalDur,SEG_MIN)?'pointer':'not-allowed',border:sel?`2px solid ${T.ink}`:`1px solid ${T.line}`,background:sel?T.line2:T.surface,display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!sel&&editSegs.length>=staffAssignmentLimit(totalDur,SEG_MIN)?0.4:1}}>
               <Avatar name={s.name} color={s.color} size={28}/><div style={{fontSize:11,fontWeight:800}}>{s.name}</div>{sel&&<Chip color="dark" size="xs">#{idx+1}</Chip>}
             </button>;})}
           </div>
@@ -5150,13 +5738,13 @@ function ScheduleBookingEditSheet({booking,staff,onClose,onSave,onDelete}){
       </div>
       <div className="booking-edit-actions" style={{padding:'12px 20px 20px',borderTop:`1px solid ${T.line2}`,display:'flex',gap:10}}>
         <button onClick={()=>setConfirmDelete(true)} disabled={busy||!onDelete} style={{flex:.9,height:54,borderRadius:14,border:'1.5px solid #FECACA',background:'#FEF2F2',color:T.danger,fontSize:14,fontWeight:800,cursor:busy||!onDelete?'default':'pointer',opacity:(busy||!onDelete)?0.55:1}}>삭제</button>
-        <button onClick={onClose} disabled={busy} style={{flex:1,height:54,borderRadius:14,border:`1.5px solid ${T.line}`,background:T.surface,fontSize:14,fontWeight:700,cursor:busy?'default':'pointer'}}>취소</button>
+        <button onClick={backSheet} disabled={busy} style={{flex:1,height:54,borderRadius:14,border:`1.5px solid ${T.line}`,background:T.surface,fontSize:14,fontWeight:700,cursor:busy?'default':'pointer'}}>{onBack?'뒤로':'취소'}</button>
         <button onClick={submit} disabled={!valid||busy} style={{flex:1.8,height:54,borderRadius:14,border:'none',background:valid?T.success:T.line,color:valid?'#fff':T.ink3,fontSize:14,fontWeight:800,cursor:valid&&!busy?'pointer':'not-allowed',opacity:busy?.6:1}}>{busy?'처리 중...':'수정 저장'}</button>
       </div>
     </div>
     {confirmDelete&&<>
-      <div onClick={busy?undefined:()=>setConfirmDelete(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.48)',zIndex:70}}/>
-      <div style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:'min(340px,90vw)',background:T.surface,borderRadius:20,zIndex:71,boxShadow:'0 20px 60px rgba(0,0,0,.28)',padding:22,animation:'popIn .2s'}}>
+      <div onClick={busy?undefined:()=>setConfirmDelete(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.48)',zIndex:170}}/>
+      <div style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:'min(340px,90vw)',background:T.surface,borderRadius:20,zIndex:171,boxShadow:'0 20px 60px rgba(0,0,0,.28)',padding:22,animation:'popIn .2s'}}>
         <div style={{fontSize:18,fontWeight:900,marginBottom:8}}>예약 삭제</div>
         <div style={{fontSize:14,color:T.ink2,lineHeight:1.6,marginBottom:18}}>
           <b>{editCustomerName||bookingCustomerName(booking,'고객')}</b> 예약을 삭제하시겠습니까?<br/>
@@ -5614,7 +6202,7 @@ function SettingsScreen({onSignOut,googleToken,setGoogleToken,session,staffAuthR
       </div>
     </div>}
 
-    {/* ???뺣낫 */}
+    {/* 기본 정보 */}
     <div style={{margin:'0 16px 24px',background:T.surface,borderRadius:16,border:`1px solid ${T.line}`,overflow:'hidden'}}>
       <div style={{padding:'12px 16px',fontSize:11,fontWeight:800,color:T.ink2,letterSpacing:.6,borderBottom:`1px solid ${T.line2}`}}>앱 정보</div>
       <div style={{padding:'13px 16px',display:'flex',justifyContent:'space-between'}}><span style={{fontSize:14,fontWeight:600}}>버전</span><span style={{fontSize:14,color:T.ink3}}>1.0.0</span></div>
@@ -5633,8 +6221,139 @@ function Toast({msg,onDone}){
   </div>;
 }
 
+function compactSimpleTime(t){
+  const[hRaw,mRaw]=String(t||'00:00').slice(0,5).split(':').map(Number);
+  const h=Number.isFinite(hRaw)?hRaw:0,m=Number.isFinite(mRaw)?mRaw:0;
+  return `${h%12||12}:${pad2(m)}`;
+}
 
-function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,supaBookings,staff,supaCustomers,setDraft,setEditingId,setFlow,onCalendarImport,onOpenBooking,canEdit=true,staffFilterId=null,staffDayOffs=[],scheduleNotice=null,onSaveScheduleNotice}){
+function SimpleScheduleView({selectedDate,staff,blocks,onClose}){
+  const dateLabel=`${selectedDate.getMonth()+1}월 ${selectedDate.getDate()}일 ${DOW_KO[selectedDate.getDay()]}요일`;
+  const headerScrollRef=useRef(null);
+  const bodyScrollRef=useRef(null);
+  const syncingScrollRef=useRef(false);
+  const touchEdgeRef=useRef(null);
+  const {columns,maxRows}=useMemo(()=>{
+    const byStaff=new Map();
+    (staff||[]).forEach(s=>byStaff.set(s.id,{id:s.id,name:s.name||'스텝',color:s.color,rows:[]}));
+    const unassigned={id:'__unassigned__',name:'미배정',color:T.ink3,rows:[]};
+    (blocks||[])
+      .slice()
+      .sort((a,b)=>String(a.start||'').localeCompare(String(b.start||''))||String(a.customer?.name||'').localeCompare(String(b.customer?.name||'')))
+      .forEach(b=>{
+        const target=byStaff.get(b.staffId)||unassigned;
+        const start=compactSimpleTime(b.start);
+        const end=compactSimpleTime(addMin(b.start||'00:00',Number(b.dur)||0));
+        const name=String(b.customer?.name||'예약자').trim()||'예약자';
+        target.rows.push({id:b.id,time:`${start} - ${end}`,name,color:b.customer?.color,source:b.customer?.source});
+      });
+    const cols=[...byStaff.values()].filter(c=>c.rows.length>0);
+    if(unassigned.rows.length>0)cols.push(unassigned);
+    return{columns:cols,maxRows:Math.max(1,...cols.map(c=>c.rows.length))};
+  },[staff,blocks]);
+  const gridCols=`repeat(${Math.max(1,columns.length)}, minmax(156px, 1fr))`;
+  const tableWidth=Math.max(320,columns.length*172);
+  const tableStyle={minWidth:tableWidth,width:`max(100%, ${tableWidth}px)`,background:T.surface};
+  const clampScrollLeft=el=>{
+    if(!el)return 0;
+    const max=Math.max(0,el.scrollWidth-el.clientWidth);
+    const next=Math.min(max,Math.max(0,el.scrollLeft));
+    if(Math.abs(el.scrollLeft-next)>.5)el.scrollLeft=next;
+    return next;
+  };
+  const syncHorizontalScroll=source=>{
+    const from=source==='header'?headerScrollRef.current:bodyScrollRef.current;
+    const to=source==='header'?bodyScrollRef.current:headerScrollRef.current;
+    if(!from||!to||syncingScrollRef.current)return;
+    const left=clampScrollLeft(from);
+    syncingScrollRef.current=true;
+    to.scrollLeft=left;
+    requestAnimationFrame(()=>{syncingScrollRef.current=false;});
+  };
+  const beginBoundedTouch=(source,e)=>{
+    if(e.touches?.length!==1)return;
+    const el=source==='header'?headerScrollRef.current:bodyScrollRef.current;
+    const t=e.touches[0];
+    touchEdgeRef.current={source,x:t.clientX,y:t.clientY,scrollLeft:el?.scrollLeft||0};
+  };
+  const moveBoundedTouch=(source,e)=>{
+    const el=source==='header'?headerScrollRef.current:bodyScrollRef.current;
+    const start=touchEdgeRef.current;
+    if(!el||!start||start.source!==source||e.touches?.length!==1)return;
+    const t=e.touches[0];
+    const dx=t.clientX-start.x;
+    const dy=t.clientY-start.y;
+    if(source==='header'&&Math.abs(dy)>Math.abs(dx)){e.preventDefault();return;}
+    if(Math.abs(dx)<=Math.abs(dy))return;
+    const max=Math.max(0,el.scrollWidth-el.clientWidth);
+    if(max<=0){e.preventDefault();return;}
+    const atStart=el.scrollLeft<=0;
+    const atEnd=el.scrollLeft>=max-1;
+    if((atStart&&dx>0)||(atEnd&&dx<0))e.preventDefault();
+  };
+  const endBoundedTouch=()=>{touchEdgeRef.current=null;};
+  return <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',background:T.surface,overflow:'hidden'}}>
+    <div style={{height:64,padding:'0 16px',borderBottom:`1px solid ${T.line}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexShrink:0,background:T.surface}}>
+      <button onClick={onClose} style={{width:42,height:42,borderRadius:'50%',border:`1px solid ${T.line}`,background:T.bg,color:T.ink,fontSize:22,fontWeight:900,cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+      <div style={{flex:1,minWidth:0,textAlign:'center'}}>
+        <div style={{fontSize:18,fontWeight:900,color:T.ink}}>간단 보기</div>
+        <div style={{fontSize:12,fontWeight:800,color:T.ink3,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{dateLabel} · 예약 {blocks?.length||0}건</div>
+      </div>
+      <div style={{width:42,flexShrink:0}}/>
+    </div>
+    <div style={{flex:1,minHeight:0,overflow:'hidden',background:T.bg,padding:'10px 10px 0'}}>
+      <div style={{height:'100%',minHeight:0,border:`1px solid ${T.line}`,borderRadius:'16px 16px 0 0',background:T.surface,overflow:'hidden',boxShadow:'none',display:'flex',flexDirection:'column'}}>
+        {columns.length===0?<div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:800,color:T.ink3}}>선택한 날짜의 예약이 없습니다.</div>:<>
+          <div
+            ref={headerScrollRef}
+            onScroll={()=>syncHorizontalScroll('header')}
+            onTouchStart={e=>beginBoundedTouch('header',e)}
+            onTouchMove={e=>moveBoundedTouch('header',e)}
+            onTouchEnd={endBoundedTouch}
+            onTouchCancel={endBoundedTouch}
+            style={{flexShrink:0,overflowX:'auto',overflowY:'hidden',overscrollBehaviorX:'none',overscrollBehaviorY:'none',WebkitOverflowScrolling:'touch',touchAction:'pan-x',background:T.surface,borderBottom:`1px solid ${T.line}`,maxWidth:'100%',scrollbarWidth:'none',msOverflowStyle:'none'}}>
+            <div style={tableStyle}>
+              <div style={{display:'grid',gridTemplateColumns:gridCols,background:T.surface}}>
+                {columns.map((col,i)=><div key={col.id} style={{height:58,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,borderLeft:i>0?`1px solid ${T.line2}`:'none',padding:'7px 4px',background:T.surface}}>
+                  <Avatar name={col.name} color={col.color} size={28}/>
+                  <div style={{fontSize:11,fontWeight:700,color:T.ink2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{col.name}</div>
+                </div>)}
+              </div>
+            </div>
+          </div>
+          <div
+            ref={bodyScrollRef}
+            onScroll={()=>syncHorizontalScroll('body')}
+            onTouchStart={e=>beginBoundedTouch('body',e)}
+            onTouchMove={e=>moveBoundedTouch('body',e)}
+            onTouchEnd={endBoundedTouch}
+            onTouchCancel={endBoundedTouch}
+            style={{flex:1,minHeight:0,overflow:'auto',overflowX:'auto',overflowY:'auto',overscrollBehaviorX:'none',overscrollBehaviorY:'contain',WebkitOverflowScrolling:'touch',touchAction:'pan-x pan-y',background:T.surface,maxWidth:'100%'}}>
+            <div style={tableStyle}>
+              {Array.from({length:maxRows}).map((_,rowIdx)=><div key={rowIdx} style={{display:'grid',gridTemplateColumns:gridCols,minHeight:42,borderBottom:`1px solid ${T.line2}`}}>
+                {columns.map((col,i)=>{
+                  const item=col.rows[rowIdx];
+                  const c=colorPalette(item?.color);
+                  return <div key={col.id+'_'+rowIdx} style={{minHeight:42,padding:'5px 6px',borderLeft:i>0?`1px solid ${T.line2}`:'none',background:T.surface,minWidth:0}}>
+                    {item&&<div style={{height:'100%',minHeight:32,display:'flex',alignItems:'center',gap:6,background:c.fill,borderLeft:`3px solid ${c.stripe}`,borderRadius:7,padding:'5px 7px',color:c.ink,overflow:'hidden',boxSizing:'border-box'}} title={`${item.time} ${item.name}`}>
+                      {item.source==='naver'&&<span style={{width:13,height:13,borderRadius:3,background:'#A3E635',color:'#14532D',fontSize:9,fontWeight:900,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0,lineHeight:1}}>N</span>}
+                      <div style={{minWidth:0,display:'flex',alignItems:'baseline',gap:5,whiteSpace:'nowrap',overflow:'hidden'}}>
+                        <span style={{fontSize:11,fontWeight:900,fontVariantNumeric:'tabular-nums',flexShrink:0}}>{item.time}</span>
+                        <span style={{fontSize:12,fontWeight:900,overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</span>
+                      </div>
+                    </div>}
+                  </div>;
+                })}
+              </div>)}
+              <div style={{height:18}}/>
+            </div>
+          </div>
+        </>}
+      </div>
+    </div>
+  </div>;
+}
+function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,supaBookings,staff,supaCustomers,setDraft,setEditingId,setFlow,onCalendarImport,onOpenBooking,canEdit=true,staffFilterId=null,staffDayOffs=[],scheduleNotice=null,staffDayOffByDate=null,scheduleNoticeByDate=null,onSaveScheduleNotice,onSimpleView}){
   const[showCal,setShowCal]=useState(false);
   const[importing,setImporting]=useState(false);
   const[noticeEdit,setNoticeEdit]=useState(false);
@@ -5667,13 +6386,54 @@ function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,s
       e.target.value='';
     }
   };
+  const calendarFullScreen=typeof window==='undefined'?true:!!window.matchMedia?.('(max-width: 768px)')?.matches;
+  const calendarNode=<MiniCalendar
+    value={selectedDate}
+    onChange={d=>setSelectedDate(d)}
+    onClose={()=>setShowCal(false)}
+    supaBookings={supaBookings}
+    staff={staff}
+    supaCustomers={supaCustomers}
+    staffFilterId={staffFilterId}
+    staffDayOffByDate={staffDayOffByDate}
+    scheduleNoticeByDate={scheduleNoticeByDate}
+    fullScreen={calendarFullScreen}
+    onOpenBooking={canEdit?(booking,origin={})=>onOpenBooking?.(booking,{
+      ...origin,
+      source:origin.source||'miniCalendar',
+      closeOrigin:origin.closeOrigin||(()=>setShowCal(false))
+    }):null}
+    onCreateBooking={canEdit?(customer,date)=>{
+
+      const d={
+        date:new Date(date),
+        duration:60,
+        startTime:'13:00',
+        endTime:'14:00',
+        customer:{
+          id:customer.id,
+          name:customer.name,
+          phone:customer.phone,
+          pin:customer.pin,
+          memo:customer.memo||'',
+          visits:0,
+          color:'sky'
+        },
+        segs:[]
+      };
+      setDraft(d);
+      setEditingId(null);
+      setShowCal(false);
+      setFlow('s3');
+    }:null}
+  />;
   return <div style={{position:'relative',padding:`calc(env(safe-area-inset-top,0px) + 10px) 16px 10px`,borderBottom:`1px solid ${T.line}`,background:T.surface,flexShrink:0,zIndex:20}}>
-    <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:10}}>
-      <div>
-        <div style={{display:'flex',alignItems:'center',gap:4}}>
+    <div className="schedule-header-row" style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:10}}>
+      <div className="schedule-header-main">
+        <div className="schedule-header-date-row" style={{display:'flex',alignItems:'center',gap:4}}>
           <button onClick={()=>setSelectedDate(d=>addDays(d,-1))} style={{width:44,height:44,borderRadius:12,border:'none',background:'transparent',color:T.ink2,fontSize:24,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
-          <button onClick={()=>setShowCal(v=>!v)} style={{border:'none',background:'transparent',cursor:'pointer',padding:'4px 6px',display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:20,fontWeight:800,letterSpacing:-.6}}>{mo}월 {dd}일 {dow}요일</span>
+          <button className="schedule-header-date-button" onClick={()=>setShowCal(v=>!v)} style={{border:'none',background:'transparent',cursor:'pointer',padding:'4px 6px',display:'flex',alignItems:'center',gap:6}}>
+            <span className="schedule-header-date-text" style={{fontSize:20,fontWeight:800,letterSpacing:-.6}}>{mo}월 {dd}일 {dow}요일</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.ink3} strokeWidth="2.5"><path d="m6 9 6 6 6-6"/></svg>
           </button>
           {isToday(selectedDate)&&<span style={{fontSize:11,fontWeight:700,color:T.accent,background:'#FFF0EA',padding:'2px 7px',borderRadius:999}}>오늘</span>}
@@ -5681,22 +6441,25 @@ function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,s
         </div>
         <div style={{fontSize:13,color:T.ink2,marginTop:2}}>예약 {blockCount}건 · 스텝 {staffCount}명{loadingBkg?' 새로고침 중':''}</div>
       </div>
-      {canEdit&&<div style={{display:'flex',alignItems:'center',gap:8,marginLeft:10}}>
-        <input ref={fileRef} type="file" accept=".ics,.ical,text/calendar" onChange={handleCalendarFile} style={{display:'none'}}/>
-        <button onClick={()=>fileRef.current?.click()} disabled={importing} style={{height:36,padding:'0 11px',borderRadius:10,border:`1px solid ${T.line}`,background:T.bg,color:T.ink2,fontSize:12,fontWeight:800,cursor:importing?'default':'pointer',whiteSpace:'nowrap',opacity:importing?.6:1}}>{importing?'업로드 중':'캘린더 업로드'}</button>
-      </div>}
+      <div className="schedule-header-actions" style={{display:'flex',alignItems:'center',gap:8,marginLeft:10,flexWrap:'wrap',justifyContent:'flex-end'}}>
+        <button onClick={onSimpleView} style={{height:36,padding:'0 11px',borderRadius:10,border:`1px solid ${T.ink}`,background:T.ink,color:'#fff',fontSize:12,fontWeight:900,cursor:'pointer',whiteSpace:'nowrap'}}>간단 보기</button>
+        {canEdit&&<>
+          <input ref={fileRef} type="file" accept=".ics,.ical,text/calendar" onChange={handleCalendarFile} style={{display:'none'}}/>
+          <button onClick={()=>fileRef.current?.click()} disabled={importing} style={{height:36,padding:'0 11px',borderRadius:10,border:`1px solid ${T.line}`,background:T.bg,color:T.ink2,fontSize:12,fontWeight:800,cursor:importing?'default':'pointer',whiteSpace:'nowrap',opacity:importing?.6:1}}>{importing?'업로드 중':'캘린더 업로드'}</button>
+        </>}
+      </div>
     </div>
 
-    {(offRows.length>0||noticeText||canEdit)&&<div style={{marginTop:10,border:`1px solid ${T.line2}`,background:T.bg,borderRadius:12,padding:'9px 10px',display:'flex',alignItems:'flex-start',gap:8}}>
-      <div style={{width:24,height:24,borderRadius:8,background:T.surface,border:`1px solid ${T.line}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:900,color:T.ink2,flexShrink:0}}>!</div>
+    {(offRows.length>0||noticeText||canEdit)&&<div style={{marginTop:10,border:'1px solid #e15555',background:'#e15555',borderRadius:12,padding:'13px 16px',display:'flex',alignItems:'flex-start',gap:10}}>
+      <div style={{width:28,height:28,borderRadius:8,background:'rgba(255,255,255,.16)',border:'1px solid rgba(255,255,255,.32)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:900,color:'#fff',flexShrink:0}}>!</div>
       <div style={{flex:1,minWidth:0}}>
-        {offRows.length>0&&<div style={{fontSize:12,fontWeight:900,color:T.ink,marginBottom:noticeText?5:0,display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
-          <span style={{color:T.ink2}}>휴무</span>
-          {offRows.map(row=><span key={row.staffId} style={{display:'inline-flex',alignItems:'center',height:22,padding:'0 8px',borderRadius:999,background:'#FEF3C7',color:'#92400E',fontSize:11,fontWeight:900}}>{row.staffName}</span>)}
+        {offRows.length>0&&<div style={{fontSize:16,fontWeight:900,color:'#fff',marginBottom:noticeText?6:0,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+          <span style={{color:'rgba(255,255,255,.82)'}}>휴무</span>
+          {offRows.map(row=><span key={row.staffId} style={{display:'inline-flex',alignItems:'center',height:26,padding:'0 10px',borderRadius:999,background:'rgba(255,255,255,.18)',color:'#fff',fontSize:14,fontWeight:900}}>{row.staffName}</span>)}
         </div>}
-        {noticeText?<div style={{fontSize:12,fontWeight:800,color:T.ink,lineHeight:1.45,whiteSpace:'pre-line',wordBreak:'break-word'}}>{noticeText}</div>:canEdit?<div style={{fontSize:12,color:T.ink3,fontWeight:700}}>선택 날짜 공지사항이 없습니다.</div>:null}
+        {noticeText?<div style={{fontSize:16,fontWeight:900,color:'#fff',lineHeight:1.48,whiteSpace:'pre-line',wordBreak:'break-word'}}>{noticeText}</div>:canEdit?<div style={{fontSize:16,color:'rgba(255,255,255,.82)',fontWeight:800}}>선택 날짜 공지사항이 없습니다.</div>:null}
       </div>
-      {canEdit&&<button onClick={openNoticeEdit} style={{height:30,padding:'0 10px',borderRadius:9,border:`1px solid ${T.line}`,background:T.surface,color:T.ink2,fontSize:11,fontWeight:900,whiteSpace:'nowrap',cursor:'pointer'}}>{noticeText?'공지 수정':'공지 쓰기'}</button>}
+      {canEdit&&<button onClick={openNoticeEdit} style={{height:34,padding:'0 12px',borderRadius:9,border:'1px solid rgba(255,255,255,.72)',background:'#fff',color:'#e15555',fontSize:14,fontWeight:900,whiteSpace:'nowrap',cursor:'pointer'}}>{noticeText?'공지 수정':'공지 쓰기'}</button>}
     </div>}
 
     {noticeEdit&&<>
@@ -5712,44 +6475,21 @@ function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,s
         </div>
       </div>
     </>}
-    {showCal&&<>
-      <div onClick={()=>setShowCal(false)} style={{position:'fixed',inset:0,zIndex:30}}/>
-      <div style={{position:'absolute',left:12,top:'calc(100% + 6px)',zIndex:31}}>
-        <MiniCalendar
-          value={selectedDate}
-          onChange={d=>{setSelectedDate(d);setShowCal(false);}}
-          onClose={()=>setShowCal(false)}
-          supaBookings={supaBookings}
-          staff={staff}
-          supaCustomers={supaCustomers}
-          staffFilterId={staffFilterId}
-          onOpenBooking={canEdit?(booking)=>{setShowCal(false);onOpenBooking?.(booking);}:null}
-          onCreateBooking={canEdit?(customer,date)=>{
-
-            const d={
-              date:new Date(date),
-              duration:60,
-              startTime:'13:00',
-              endTime:'14:00',
-              customer:{
-                id:customer.id,
-                name:customer.name,
-                phone:customer.phone,
-                pin:customer.pin,
-                memo:customer.memo||'',
-                visits:0,
-                color:'sky'
-              },
-              segs:[]
-            };
-            setDraft(d);
-            setEditingId(null);
-            setShowCal(false); // 誘몃땲 ?щ젰 ?リ린
-            setFlow('s3');
-          }:null}
-        />
+    {showCal&&ReactDOM.createPortal(calendarFullScreen?<div style={{position:'fixed',inset:0,zIndex:120,background:T.surface,display:'flex',flexDirection:'column',paddingTop:'env(safe-area-inset-top,0px)',paddingBottom:'env(safe-area-inset-bottom,0px)',overflow:'hidden'}}>
+      <div style={{height:58,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'0 16px',borderBottom:`1px solid ${T.line2}`,background:T.surface,flexShrink:0}}>
+        <button type="button" onClick={()=>setShowCal(false)} style={{width:40,height:40,borderRadius:'50%',border:`1px solid ${T.line}`,background:T.bg,color:T.ink,fontSize:18,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>X</button>
+        <div style={{flex:1,minWidth:0,textAlign:'center'}}>
+          <div style={{fontSize:18,fontWeight:900,color:T.ink}}>미니 달력</div>
+          <div style={{fontSize:12,fontWeight:800,color:T.ink3,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>미니달력 · 예약 리스트</div>
+        </div>
+        <div style={{width:40,flexShrink:0}}/>
       </div>
-    </>}
+      {calendarNode}
+    </div>:<div onClick={()=>setShowCal(false)} style={{position:'fixed',inset:0,zIndex:120,background:'rgba(17,24,39,.22)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'92px 18px 24px',overflow:'auto'}}>
+      <div onClick={e=>e.stopPropagation()} style={{maxWidth:'min(360px,calc(100vw - 36px))',maxHeight:'calc(100vh - 116px)',display:'flex',flexDirection:'column'}}>
+        {calendarNode}
+      </div>
+    </div>,document.body)}
   </div>;
 }
 
@@ -5941,9 +6681,48 @@ function LoginScreen({onLogin}){
 }
 
 
+function parseAdminLaunchRoute(){
+  try{
+    const params=new URLSearchParams(window.location.search||'');
+    return{
+      tab:params.get('tab')||'',
+      date:params.get('date')||params.get('booking_date')||'',
+      bookingId:params.get('booking_id')||params.get('bookingId')||'',
+      startTime:params.get('start_time')||'',
+      staffId:params.get('staff_id')||''
+    };
+  }catch{return{tab:'',date:'',bookingId:'',startTime:'',staffId:''};}
+}
+function adminTabFromRoute(tab){
+  const v=String(tab||'').toLowerCase();
+  if(v==='schedule'||v==='calendar'||v==='today')return'today';
+  if(v==='requests'||v==='request'||v==='inbox')return'inbox';
+  if(v==='staff')return'staff';
+  if(v==='customer'||v==='customers'||v==='cust')return'cust';
+  if(v==='settings'||v==='me')return'me';
+  return'today';
+}
+function adminDateFromRoute(date){
+  const m=String(date||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m)return null;
+  const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+  return Number.isNaN(d.getTime())?null:d;
+}
+function clearAdminLaunchRouteParams(){
+  try{
+    const params=new URLSearchParams(window.location.search||'');
+    const routeKeys=['tab','date','booking_date','booking_id','bookingId','start_time','staff_id'];
+    if(!routeKeys.some(k=>params.has(k)))return;
+    window.history.replaceState(null,'',window.location.pathname+(window.location.hash||''));
+  }catch{}
+}
+
 function AdminApp({session,onSignOut,onSessionUpdate}){
-  const[tab,setTab]=useState('today');
-  const[selectedDate,setSelectedDate]=useState(()=>new Date());
+  const launchRouteRef=useRef(null);
+  if(!launchRouteRef.current)launchRouteRef.current=parseAdminLaunchRoute();
+  const initialRoute=launchRouteRef.current;
+  const[tab,setTab]=useState(()=>adminTabFromRoute(initialRoute.tab));
+  const[selectedDate,setSelectedDate]=useState(()=>adminDateFromRoute(initialRoute.date)||new Date());
   const[staff,setStaff]=useState([]);
   const[customers,setCustomers]=useState([]);
   const[blocks,setBlocks]=useState([]);
@@ -5954,6 +6733,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
   const[selectedBlock,setSelectedBlock]=useState(null);
   const[editingId,setEditingId]=useState(null);
   const[scheduleEdit,setScheduleEdit]=useState(null);
+  const[simpleView,setSimpleView]=useState(false);
   const[supaBookings,setSupaBookings]=useState([]);
   const[allPending,setAllPending]=useState([]);
   const[supaCustomers,setSupaCustomers]=useState([]);
@@ -6004,6 +6784,38 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
   },[staffDayOffByDate,selectedDateKey,staff]);
   const selectedScheduleNotice=scheduleNoticeByDate.get(selectedDateKey)||null;
 
+  useEffect(()=>{
+    const applyRoute=(route)=>{
+      if(!route)return;
+      const nextTab=adminTabFromRoute(route.tab);
+      if(route.tab)setTab(nextTab);
+      const nextDate=adminDateFromRoute(route.date);
+      if(nextDate)setSelectedDate(nextDate);
+      if(route.bookingId){
+        const id=String(route.bookingId);
+        setHighlightId(`sb_${id}`);
+        const timer=setTimeout(()=>setHighlightId(null),4500);
+        return()=>clearTimeout(timer);
+      }
+      return undefined;
+    };
+    let clearHighlight=applyRoute(launchRouteRef.current);
+    clearAdminLaunchRouteParams();
+    launchRouteRef.current={};
+    const onRouteChange=()=>{
+      if(typeof clearHighlight==='function')clearHighlight();
+      clearHighlight=applyRoute(parseAdminLaunchRoute());
+      clearAdminLaunchRouteParams();
+    };
+    window.addEventListener('popstate',onRouteChange);
+    window.addEventListener('focus',onRouteChange);
+    return()=>{
+      if(typeof clearHighlight==='function')clearHighlight();
+      window.removeEventListener('popstate',onRouteChange);
+      window.removeEventListener('focus',onRouteChange);
+    };
+  },[]);
+
 
   useEffect(()=>{
     let unsubscribe=null;
@@ -6032,11 +6844,9 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
     ]);
     const visibilityByStaff=staffVisibilityMap(visibilityRows);
     const profileByStaff=staffProfileMap(profileRows);
-    const cachedVisibility=LS.get(LS_STAFF_VIS,{});
-    const cachedProfiles=LS.get(LS_STAFF_PROFILE,{});
-    const mergedVisibility={...cachedVisibility};
+    const mergedVisibility={};
     visibilityByStaff.forEach((v,staffId)=>{mergedVisibility[staffId]=v.bookingVisible;});
-    const mergedProfiles={...cachedProfiles};
+    const mergedProfiles={};
     profileByStaff.forEach((v,staffId)=>{mergedProfiles[staffId]=v.profile;});
     LS.set(LS_STAFF_VIS,mergedVisibility);
     LS.set(LS_STAFF_PROFILE,mergedProfiles);
@@ -6537,11 +7347,12 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
 
   const confirmBooking=useCallback(async(block)=>{
     const booking=supaBookings.find(b=>b.id===block.supaId);
-    await sbPatch('bookings',block.supaId,{
+    const ok=await sbPatch('bookings',block.supaId,{
       status:'confirmed',
       confirmed_at:new Date().toISOString(),
       customer_memo:withAdminActionMemo(booking?.customer_memo||block.customer_memo||'','confirm',session)
     });
+    if(!ok){setToast({title:'예약 확정 실패',sub:'DB 저장에 실패했습니다. 다시 시도해주세요.'});return;}
     await notifyApp({bookingId:block.supaId,phone:block.phone,type:'booking_confirmed'});
     await notifyCustomerPush({bookingId:block.supaId,phone:block.phone,type:'booking_confirmed'});
     setSelectedBlock(null);
@@ -6552,7 +7363,8 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
 
   const rejectBooking=useCallback(async(block)=>{
     const booking=supaBookings.find(b=>b.id===block.supaId);
-    await sbPatch('bookings',block.supaId,{status:'rejected',customer_memo:withAdminActionMemo(booking?.customer_memo||block.customer_memo||'','reject',session)});
+    const ok=await sbPatch('bookings',block.supaId,{status:'rejected',customer_memo:withAdminActionMemo(booking?.customer_memo||block.customer_memo||'','reject',session)});
+    if(!ok){setToast({title:'예약 거절 실패',sub:'DB 저장에 실패했습니다. 다시 시도해주세요.'});return;}
     await notifyApp({bookingId:block.supaId,phone:block.phone,type:'booking_rejected'});
     await notifyCustomerPush({bookingId:block.supaId,phone:block.phone,type:'booking_rejected'});
     setSelectedBlock(null);
@@ -6577,7 +7389,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
       const booking=supaBookings.find(b=>b.id===block.supaId);
       if(!booking)return;
       setSelectedBlock(null);
-      setScheduleEdit({booking,block});
+      setScheduleEdit({booking,block,returnBlock:block});
       return;
 
       // staff_sequence ?뚯떛
@@ -6633,7 +7445,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
   };
   const closeFlow=()=>{setFlow(null);setDraft(null);setEditingId(null);};
 
-  const openBookingFromMini=(booking)=>{
+  const openBookingFromMini=(booking,origin={})=>{
     if(!booking)return;
     const parts=String(booking.booking_date||'').split('-').map(Number);
     if(parts.length===3&&parts.every(Boolean))setSelectedDate(new Date(parts[0],parts[1]-1,parts[2]));
@@ -6649,7 +7461,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
       isSupa:true,
       supaId:booking.id
     };
-    setScheduleEdit({booking,block});
+    setScheduleEdit({booking,block,origin:'miniCalendar',closeOrigin:origin.closeOrigin,updateOriginBooking:origin.updateOriginBooking});
   };
 
   const handleBlockMove=useCallback(async(blockId,newStart,newStaffId)=>{
@@ -6893,6 +7705,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
 
   return <div style={{height:'100%',minHeight:0,display:'flex',flexDirection:'column',background:T.bg,overflow:'hidden',paddingBottom:'calc(68px + env(safe-area-inset-bottom,0px))',borderLeft:'none',borderRight:'none'}}>
     {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+    {tab!=='today'&&<AdminNoticeBanner staffDayOffs={selectedDateDayOffs} scheduleNotice={selectedScheduleNotice} dateLabel={`${selectedDate.getMonth()+1}월 ${selectedDate.getDate()}일 ${DOW_KO[selectedDate.getDay()]}요일`} style={{margin:'calc(env(safe-area-inset-top,0px) + 10px) 16px 8px',flexShrink:0}}/>}
     {tab==='inbox'&&<InboxScreen
       allPending={allPending}
       staff={staff}
@@ -6913,7 +7726,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
         }
         await notifyApp({bookingId:b.id,phone:bookingCustomerPhone(b),type:'booking_confirmed'});
         await notifyCustomerPush({bookingId:b.id,phone:bookingCustomerPhone(b),type:'booking_confirmed'});
-        // 3. Google Calendar ?대깽???앹꽦
+        // 3. Google Calendar 이벤트 생성
         const curToken=gcalGetToken();
         if(curToken){
           const svcMap={hair:'헤어',makeup:'메이크업',both:'헤어+메이크업'};
@@ -6994,28 +7807,32 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
       canEdit={canEdit}
     />}
     {tab==='today'&&<>
-      <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={visibleStaff.length} loadingBkg={loadingBkg} supaBookings={visibleSupaBookings} staff={visibleStaff} supaCustomers={supaCustomers} setDraft={setDraft} setEditingId={setEditingId} setFlow={setFlow} onCalendarImport={importCalendarFile} onOpenBooking={openBookingFromMini} canEdit={canEdit} staffFilterId={null} staffDayOffs={selectedDateDayOffs} scheduleNotice={selectedScheduleNotice} onSaveScheduleNotice={saveScheduleNotice}/>
-      <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative'}}>
-        <Timeline staff={visibleStaff} blocks={todayBlocks} highlightId={highlightId}
-          onBlockTap={b=>{if(!flow)setSelectedBlock(b);}}
-          onBlockEdit={canEdit?b=>{if(!flow)openEdit(b);}:null}
-          onBlockDelete={canEdit?id=>{if(!flow)deleteBlock(id);}:null}
-          onBlockMove={canEdit?handleBlockMove:null}
-          onEmptyTap={canEdit?openNewAt:null}
-          canEdit={canEdit}/>
-        {canEdit&&!flow&&!selectedBlock&&<button onClick={openNew} style={{position:'absolute',right:20,bottom:'calc(92px + env(safe-area-inset-bottom,0px))',width:56,height:56,borderRadius:'50%',background:T.accent,color:'#fff',border:'none',fontSize:30,fontWeight:300,boxShadow:'none',cursor:'pointer',zIndex:10,display:'flex',alignItems:'center',justifyContent:'center',animation:'popIn .3s'}}>+</button>}
-      </div>
+      {simpleView?<SimpleScheduleView selectedDate={selectedDate} staff={visibleStaff} blocks={todayBlocks} onClose={()=>setSimpleView(false)}/>:<>
+        <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={visibleStaff.length} loadingBkg={loadingBkg} supaBookings={visibleSupaBookings} staff={visibleStaff} supaCustomers={supaCustomers} setDraft={setDraft} setEditingId={setEditingId} setFlow={setFlow} onCalendarImport={importCalendarFile} onOpenBooking={openBookingFromMini} canEdit={canEdit} staffFilterId={null} staffDayOffs={selectedDateDayOffs} scheduleNotice={selectedScheduleNotice} staffDayOffByDate={staffDayOffByDate} scheduleNoticeByDate={scheduleNoticeByDate} onSaveScheduleNotice={saveScheduleNotice} onSimpleView={()=>setSimpleView(true)}/>
+        <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative'}}>
+          <Timeline staff={visibleStaff} blocks={todayBlocks} highlightId={highlightId}
+            onBlockTap={b=>{if(!flow)setSelectedBlock(b);}}
+            onBlockEdit={canEdit?b=>{if(!flow)openEdit(b);}:null}
+            onBlockDelete={canEdit?id=>{if(!flow)deleteBlock(id);}:null}
+            onBlockMove={canEdit?handleBlockMove:null}
+            onEmptyTap={canEdit?openNewAt:null}
+            canEdit={canEdit}/>
+          {canEdit&&!flow&&!selectedBlock&&<button onClick={openNew} style={{position:'absolute',right:20,bottom:'calc(92px + env(safe-area-inset-bottom,0px))',width:56,height:56,borderRadius:'50%',background:T.accent,color:'#fff',border:'none',fontSize:30,fontWeight:300,boxShadow:'none',cursor:'pointer',zIndex:10,display:'flex',alignItems:'center',justifyContent:'center',animation:'popIn .3s'}}>+</button>}
+        </div>
+      </>}
     </>}
-    {tab==='staff'&&<StaffScreen staff={staff} setStaff={setStaff} blocks={todayBlocks} canEdit={canManageStaffPermissions} sessionStaffId={isStaffSession?session?.staffId:null} staffDayOffByDate={staffDayOffByDate} onToggleDayOff={saveStaffDayOff}/>}
+    {tab==='staff'&&<StaffScreen staff={staff} setStaff={setStaff} blocks={todayBlocks} canEdit={canManageStaffPermissions} sessionStaffId={isStaffSession?session?.staffId:null} staffDayOffByDate={staffDayOffByDate} onToggleDayOff={saveStaffDayOff} onRefreshStaff={loadStaff}/>}
     {tab==='cust' &&<CustomerScreen supaCustomers={supaCustomers} supaHistory={supaHistory} onRefresh={()=>Promise.all([loadSupaCustomers(),reloadSupaBookings()])} canEdit={canEdit}/>}
     {tab==='me'   &&<SettingsScreen onSignOut={signOut} googleToken={googleToken} setGoogleToken={setGoogleToken} session={session} staff={staff} staffAuthRows={staffAuthRows} onApproveStaffAuth={approveStaffAuth} onRejectStaffAuth={rejectStaffAuth}/>}
-    <TabBar active={tab} setActive={v=>{setTab(v);closeFlow();setSelectedBlock(null);}} pendingCount={allPending.length} staffAuthPendingCount={canManageStaffPermissions?staffAuthRows.filter(r=>r.status==='pending').length:0}/>
+    <TabBar active={tab} setActive={v=>{setTab(v);setSimpleView(false);closeFlow();setSelectedBlock(null);}} pendingCount={allPending.length} staffAuthPendingCount={canManageStaffPermissions?staffAuthRows.filter(r=>r.status==='pending').length:0}/>
     {selectedBlock&&<BlockSheet block={selectedBlock} staff={visibleStaff} onClose={()=>setSelectedBlock(null)} onEdit={()=>openEdit(selectedBlock)} onDelete={()=>deleteBlock(selectedBlock.id)} onConfirm={confirmBooking} onReject={rejectBooking} canEdit={canEdit}/>}
     {canEdit&&scheduleEdit&&<ScheduleBookingEditSheet
       booking={scheduleEdit.booking}
       staff={staff}
       onClose={()=>setScheduleEdit(null)}
-      onDelete={()=>cancelSupabaseBooking(scheduleEdit.booking,scheduleEdit.block,{source:'edit'})}
+      onBack={scheduleEdit.origin==='miniCalendar'?()=>setScheduleEdit(null):scheduleEdit.returnBlock?()=>{setScheduleEdit(null);setSelectedBlock(scheduleEdit.returnBlock);}:null}
+      onDismiss={()=>{scheduleEdit.closeOrigin?.();setScheduleEdit(null);}}
+      onDelete={async()=>{const ok=await cancelSupabaseBooking(scheduleEdit.booking,scheduleEdit.block,{source:'edit'});if(ok)scheduleEdit.updateOriginBooking?.(scheduleEdit.booking,'delete');return ok;}}
       onSave={async(updates,meta={})=>{
         const nextCustomerName=String(meta.customerName||'').trim();
         const nextCustomerPhone=String(meta.customerPhone||'').trim();
@@ -7048,12 +7865,17 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
             name:nextCustomerName||customerResult.row?.name||bookingCustomerName(scheduleEdit.booking,'고객'),
             phone:nextCustomerPhone||customerResult.row?.phone||bookingCustomerPhone(scheduleEdit.booking)
           };
+          const optimisticBooking={
+            ...scheduleEdit.booking,
+            ...nextUpdates,
+            customer_id:customerResult.customerId||scheduleEdit.booking.customer_id,
+            customers:optimisticCustomer
+          };
           setSupaBookings(prev=>prev.map(b=>b.id===scheduleEdit.booking.id?{
             ...b,
-            ...nextUpdates,
-            customer_id:customerResult.customerId||b.customer_id,
-            customers:optimisticCustomer
+            ...optimisticBooking
           }:b));
+          scheduleEdit.updateOriginBooking?.(optimisticBooking,'update');
           setScheduleEdit(null);
           await reloadSupaBookings();
           await loadSupaCustomers();
@@ -7164,7 +7986,7 @@ function initApp() {
     ReactDOM.render(<App/>, document.getElementById('root'));
     console.log('렌더링 완료');
   } catch(e) {
-    console.error('???뚮뜑留??먮윭:', e);
+    console.error('렌더링 오류:', e);
     document.getElementById('root').innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif;"><h2 style="color:#EF4444;margin-bottom:16px;">앱 로딩 실패</h2><p style="color:#6B7280;margin-bottom:24px;">렌더링 에러: '+e.message+'</p><p style="font-size:14px;color:#9CA3AF;">브라우저 콘솔에서 상세 오류를 확인하세요.</p><button onclick="location.reload()" style="padding:10px 20px;border-radius:8px;border:none;background:#18181B;color:#fff;cursor:pointer;margin-top:16px;">새로고침</button></div>';
   }
 }

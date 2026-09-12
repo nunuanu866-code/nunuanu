@@ -183,16 +183,6 @@ function parseIcsEvents(text, sourceIndex = 0) {
   }).filter(Boolean);
 }
 
-function bookingMemo(ev) {
-  return [
-    'NAVER_BOOKING',
-    'NAVER_CALENDAR',
-    `NAVER_SOURCE_KEY:${ev.sourceKey}`,
-    `NAVER_CALENDAR_UID:${ev.uid}`,
-    `NAVER_CALENDAR_SYNCED_AT:${new Date().toISOString()}`,
-    ev.description ? `설명: ${ev.description}` : '',
-  ].filter(Boolean).join('\n');
-}
 
 async function ensureCustomer(ev) {
   const rows = await sbGet(`customers?select=id,name,phone,pin,memo&phone=eq.${encodeURIComponent(ev.phone)}&limit=1`);
@@ -212,8 +202,7 @@ async function findLinkedBooking(sourceKey) {
   const links = await sbGet(`naver_booking_links?select=booking_id&source_key=eq.${encodeURIComponent(sourceKey)}&order=updated_at.desc&limit=1`).catch(() => []);
   const bookingId = links?.[0]?.booking_id;
   if (bookingId) return bookingId;
-  const rows = await sbGet(`bookings?select=id&customer_memo=ilike.${encodeURIComponent(`*NAVER_SOURCE_KEY:${sourceKey}*`)}&order=created_at.desc&limit=1`).catch(() => []);
-  return rows?.[0]?.id || null;
+  return null;
 }
 
 async function syncEvent(ev) {
@@ -224,7 +213,7 @@ async function syncEvent(ev) {
       await sbPatch('bookings', `id=eq.${encodeURIComponent(existingBookingId)}`, {
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),
-        customer_memo: bookingMemo(ev),
+        customer_memo: '',
       });
     }
     await sbUpsert('naver_booking_links', {
@@ -255,7 +244,7 @@ async function syncEvent(ev) {
     end_time: ev.end,
     service_type: ev.serviceType,
     service_detail: `네이버 캘린더 - ${ev.productName}`,
-    customer_memo: bookingMemo(ev),
+    customer_memo: '',
     status: 'confirmed',
     confirmed_at: new Date().toISOString(),
   };

@@ -1,17 +1,17 @@
 import { useNavigate } from 'react-router-dom'
-import mainUiImage from '../../예약 앱 메인2.jpg'
+import mainUiImage from '../../예약 앱 메인3.jpg'
 
 export default function LandingPage() {
   const navigate = useNavigate()
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#efeee9]">
-      <section className="flex min-h-screen items-center justify-center overflow-hidden bg-[#efeee9]">
+    <main className="min-h-screen overflow-x-hidden bg-[#efeee9]">
+      <section className="flex min-h-screen items-start justify-center overflow-x-hidden bg-[#efeee9]">
         <div
-          className="relative max-h-[100svh] overflow-hidden bg-[#efeee9]"
+          className="relative w-screen overflow-hidden bg-[#efeee9]"
           style={{
             aspectRatio: '1292 / 2796',
-            width: 'min(100vw, 28rem, calc(100svh * 1292 / 2796))',
+            width: '100vw',
           }}
         >
         <img
@@ -33,10 +33,10 @@ export default function LandingPage() {
           onClick={() => navigate('/booking')}
           className="landing-hit absolute rounded-[44px] focus-visible:outline focus-visible:outline-4 focus-visible:outline-black/70"
           style={{
-            left: '15.6%',
-            top: '37.8%',
-            width: '68.8%',
-            height: '7.8%',
+            left: '26.1%',
+            top: '54.5%',
+            width: '47.9%',
+            height: '5.4%',
             '--landing-press': 'rgba(255,255,255,.26)',
           }}
         >
@@ -50,10 +50,10 @@ export default function LandingPage() {
           onClick={() => navigate('/my')}
           className="landing-hit absolute rounded-[44px] focus-visible:outline focus-visible:outline-4 focus-visible:outline-black/70"
           style={{
-            left: '15.6%',
-            top: '50%',
-            width: '68.9%',
-            height: '7.9%',
+            left: '26.1%',
+            top: '62.1%',
+            width: '47.9%',
+            height: '5.4%',
             '--landing-press': 'rgba(74,31,12,.14)',
           }}
         >
@@ -66,10 +66,10 @@ export default function LandingPage() {
           aria-label="관리자 페이지"
           className="landing-hit absolute rounded-full focus-visible:outline focus-visible:outline-4 focus-visible:outline-black/70"
           style={{
-            left: '32%',
-            top: '83.9%',
-            width: '36%',
-            height: '7.5%',
+            left: '38.9%',
+            top: '84.7%',
+            width: '22.1%',
+            height: '4.7%',
             '--landing-press': 'rgba(0,0,0,.10)',
           }}
         >

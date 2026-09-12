@@ -37,13 +37,14 @@ function normalizeRecipientPhone(raw) {
   return digits;
 }
 
-async function sbInsert(table, body) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+async function sbUpsert(table, body, onConflict) {
+  const suffix = onConflict ? `?on_conflict=${encodeURIComponent(onConflict)}` : '';
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${suffix}`, {
     method: 'POST',
-    headers: sbHeaders({ Prefer: 'return=representation' }),
+    headers: sbHeaders({ Prefer: 'resolution=ignore-duplicates,return=representation' }),
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`Supabase INSERT ${r.status}: ${await r.text()}`);
+  if (!r.ok) throw new Error(`Supabase UPSERT ${r.status}: ${await r.text()}`);
   return r.json();
 }
 
@@ -92,8 +93,8 @@ export default async function handler(req, res) {
     if (!phone) return json(res, 400, { ok: false, error: 'invalid_phone' });
     if (!text) return json(res, 400, { ok: false, error: 'unsupported_type' });
 
-    const eventKey = `customer:${phone}:${bookingId}:${type}:${Date.now()}`;
-    const rows = await sbInsert('push_notification_events', {
+    const eventKey = `customer:${phone}:${bookingId}:${type}`;
+    const rows = await sbUpsert('push_notification_events', {
       event_key: eventKey,
       type,
       title: text.title,
@@ -107,7 +108,7 @@ export default async function handler(req, res) {
         url: '/',
       },
       status: 'pending',
-    });
+    }, 'event_key');
 
     await triggerDispatch(req);
 
