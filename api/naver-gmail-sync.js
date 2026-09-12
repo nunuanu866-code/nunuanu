@@ -158,6 +158,26 @@ async function triggerPushDispatch(req) {
   }
 }
 
+async function suppressPendingPushEventsForBooking(bookingId, sinceIso) {
+  if (!bookingId) return false;
+  try {
+    const since = encodeURIComponent(sinceIso || new Date(Date.now() - 5 * 60 * 1000).toISOString());
+    await sbPatch(
+      'push_notification_events',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&status=eq.pending&created_at=gte.${since}`,
+      {
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        last_error: 'suppressed_naver_resync',
+      }
+    );
+    return true;
+  } catch (error) {
+    console.warn('[naver-gmail-sync] suppress pending push events skipped', error);
+    return false;
+  }
+}
+
 async function findProcessedMailEvent(payload) {
   const messageId = String(payload.messageId || payload.id || '').trim();
   if (!messageId) return null;
@@ -663,6 +683,7 @@ export default async function handler(req, res) {
   if (!authorize(req)) return json(res, 401, { ok: false, error: 'unauthorized' });
   if (!SERVICE_KEY) return json(res, 500, { ok: false, error: 'missing_SUPABASE_SERVICE_ROLE_KEY' });
 
+  const syncStartedAt = new Date().toISOString();
   const payload = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   if (!String(payload.from || '').toLowerCase().includes(NAVER_SENDER)) {
     return json(res, 200, { ok: true, skipped: true, reason: 'not_naver_booking_sender' });
@@ -690,9 +711,12 @@ export default async function handler(req, res) {
     if (!suppressPush && parsed.eventType === 'confirmed' && result.action === 'updated') {
       await enqueueNaverBookingUpdatedPush(parsed, payload, result.bookingId);
     }
+    const resyncPushSuppressed = suppressPush && result.bookingId
+      ? await suppressPendingPushEventsForBooking(result.bookingId, syncStartedAt)
+      : false;
     const dispatchTriggered = suppressPush ? false : await triggerPushDispatch(req);
 
-    return json(res, 200, { ok: true, eventType: parsed.eventType, dispatchTriggered, ...result });
+    return json(res, 200, { ok: true, eventType: parsed.eventType, dispatchTriggered, resyncPushSuppressed, ...result });
   } catch (error) {
     const status = error.status || 422;
     const fallback = error.parsed || parsed || {

@@ -12,7 +12,11 @@
  * - NAVER_GMAIL_SYNC_SECRET: must match Vercel NAVER_GMAIL_SYNC_SECRET if set
  * - NAVER_LOOKBACK_DAYS: default 30
  * - NAVER_SYNC_MAX_THREADS: default 100
- * - NAVER_BACKFILL_MAX_THREADS: default 1000
+ * - NAVER_SYNC_MAX_MESSAGES: default 20
+ * - NAVER_ERROR_RETRY_MAX_THREADS: default 50
+ * - NAVER_ERROR_RETRY_MAX_MESSAGES: default 10
+ * - NAVER_BACKFILL_MAX_THREADS: default 50
+ * - NAVER_BACKFILL_MAX_MESSAGES: default 20
  *
  * Google Calendar sync still uses:
  * - SUPABASE_URL
@@ -24,10 +28,12 @@ const NAVER_BOOKING_SENDER = 'naverbooking_noreply@navercorp.com';
 const NAVER_SYNC_LABEL = 'nununanu_naver_booking_synced';
 const NAVER_ERROR_LABEL = 'nununanu_naver_booking_error';
 const NAVER_DEFAULT_LOOKBACK_DAYS = 30;
-const NAVER_DEFAULT_SYNC_MAX_THREADS = 30;
-const NAVER_DEFAULT_SYNC_MAX_MESSAGES = 12;
+const NAVER_DEFAULT_SYNC_MAX_THREADS = 100;
+const NAVER_DEFAULT_SYNC_MAX_MESSAGES = 20;
 const NAVER_DEFAULT_BACKFILL_MAX_THREADS = 50;
-const NAVER_DEFAULT_BACKFILL_MAX_MESSAGES = 12;
+const NAVER_DEFAULT_BACKFILL_MAX_MESSAGES = 20;
+const NAVER_DEFAULT_ERROR_RETRY_MAX_THREADS = 50;
+const NAVER_DEFAULT_ERROR_RETRY_MAX_MESSAGES = 10;
 const NAVER_MAX_GMAIL_API_MESSAGE_GETS = 20;
 const NAVER_SCRIPT_LOCK_WAIT_MS = 1000;
 const NAVER_DEFAULT_SYNC_URL = 'https://nununanu-app.vercel.app/api/naver-gmail-sync';
@@ -79,6 +85,14 @@ function syncNaverBookingEmails() {
       mode: 'recent'
     });
 
+    let errorRetryResult = { skipped: true, reason: 'no_error_retry_run' };
+    try {
+      errorRetryResult = runNaverBookingErrorRetry_(props, false);
+    } catch (error) {
+      errorRetryResult = { failed: true, message: String(error && error.message ? error.message : error) };
+      console.error('[Naver Gmail error retry failed]', errorRetryResult);
+    }
+
     const runGoogleCalendar = props.getProperty('NAVER_SYNC_RUN_GCAL') === 'true';
     let calendarResult = { skipped: true, reason: 'separate_google_calendar_trigger' };
     if (runGoogleCalendar) {
@@ -90,10 +104,30 @@ function syncNaverBookingEmails() {
       }
     }
 
-    return { naver: naverResult, googleCalendar: calendarResult };
+    return { naver: naverResult, errorRetry: errorRetryResult, googleCalendar: calendarResult };
   });
 }
 
+function buildErroredNaverQuery_() {
+  return 'in:anywhere from:' + NAVER_BOOKING_SENDER + ' label:' + NAVER_ERROR_LABEL;
+}
+
+function runNaverBookingErrorRetry_(props, forceResync) {
+  const retryProps = props || PropertiesService.getScriptProperties();
+  const maxThreadsProp = forceResync ? 'NAVER_ERROR_RESYNC_MAX_THREADS' : 'NAVER_ERROR_RETRY_MAX_THREADS';
+  const maxMessagesProp = forceResync ? 'NAVER_ERROR_RESYNC_MAX_MESSAGES' : 'NAVER_ERROR_RETRY_MAX_MESSAGES';
+  const maxThreadsDefault = forceResync ? NAVER_DEFAULT_BACKFILL_MAX_THREADS : NAVER_DEFAULT_ERROR_RETRY_MAX_THREADS;
+  const maxMessagesDefault = forceResync ? NAVER_DEFAULT_BACKFILL_MAX_MESSAGES : NAVER_DEFAULT_ERROR_RETRY_MAX_MESSAGES;
+
+  return runNaverBookingSync_({
+    query: buildErroredNaverQuery_(),
+    maxThreads: clampNaverLimit_(retryProps.getProperty(maxThreadsProp), maxThreadsDefault, 100),
+    maxMessages: clampNaverLimit_(retryProps.getProperty(maxMessagesProp), maxMessagesDefault, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
+    ignoreProcessed: Boolean(forceResync),
+    payloadOverrides: forceResync ? { forceReprocess: true, suppressPush: true } : null,
+    mode: forceResync ? 'error_resync' : 'error_retry'
+  });
+}
 function resyncRecentNaverBookingEmails() {
   return runNaverBookingSyncLocked_(function() {
     const props = PropertiesService.getScriptProperties();
@@ -110,27 +144,21 @@ function resyncRecentNaverBookingEmails() {
 }
 function resyncErroredNaverBookingEmails() {
   return runNaverBookingSyncLocked_(function() {
-    const props = PropertiesService.getScriptProperties();
-    return runNaverBookingSync_({
-      query: 'in:anywhere from:' + NAVER_BOOKING_SENDER + ' label:' + NAVER_ERROR_LABEL,
-      maxThreads: clampNaverLimit_(props.getProperty('NAVER_ERROR_RESYNC_MAX_THREADS'), NAVER_DEFAULT_BACKFILL_MAX_THREADS, 100),
-      maxMessages: clampNaverLimit_(props.getProperty('NAVER_ERROR_RESYNC_MAX_MESSAGES'), NAVER_DEFAULT_BACKFILL_MAX_MESSAGES, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
-      ignoreProcessed: true,
-      payloadOverrides: { forceReprocess: true, suppressPush: true },
-      mode: 'error_resync'
-    });
+    return runNaverBookingErrorRetry_(PropertiesService.getScriptProperties(), true);
   });
 }
 function backfillAllCurrentNaverBookingEmails() {
-  const props = PropertiesService.getScriptProperties();
-  return runNaverBookingSync_({
-    query: 'in:anywhere from:' + NAVER_BOOKING_SENDER,
-    maxThreads: clampNaverLimit_(props.getProperty('NAVER_BACKFILL_MAX_THREADS'), NAVER_DEFAULT_BACKFILL_MAX_THREADS, 100),
-    maxMessages: clampNaverLimit_(props.getProperty('NAVER_BACKFILL_MAX_MESSAGES'), NAVER_DEFAULT_BACKFILL_MAX_MESSAGES, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
-    ignoreProcessed: true,
-    payloadOverrides: { forceReprocess: true, suppressPush: true },
-    pageTokenProp: NAVER_BACKFILL_PAGE_TOKEN_PROP,
-    mode: 'backfill'
+  return runNaverBookingSyncLocked_(function() {
+    const props = PropertiesService.getScriptProperties();
+    return runNaverBookingSync_({
+      query: 'in:anywhere from:' + NAVER_BOOKING_SENDER,
+      maxThreads: clampNaverLimit_(props.getProperty('NAVER_BACKFILL_MAX_THREADS'), NAVER_DEFAULT_BACKFILL_MAX_THREADS, 100),
+      maxMessages: clampNaverLimit_(props.getProperty('NAVER_BACKFILL_MAX_MESSAGES'), NAVER_DEFAULT_BACKFILL_MAX_MESSAGES, NAVER_MAX_GMAIL_API_MESSAGE_GETS),
+      ignoreProcessed: true,
+      payloadOverrides: { forceReprocess: true, suppressPush: true },
+      pageTokenProp: NAVER_BACKFILL_PAGE_TOKEN_PROP,
+      mode: 'backfill'
+    });
   });
 }
 

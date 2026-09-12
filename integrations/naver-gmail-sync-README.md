@@ -16,8 +16,8 @@
   - 같은 이름 고객이 여러 명이어도 이름으로 매칭하지 않고 예약번호로만 처리합니다.
 - 실패 방지:
   - Apps Script는 성공한 메일만 처리 완료로 저장합니다.
-  - API 실패, 파싱 실패, 취소 매칭 실패 메일은 다음 실행에서 다시 시도됩니다.
-  - `nununanu_naver_booking_synced` / `nununanu_naver_booking_error` 라벨은 사람이 확인하기 위한 표시용입니다. 검색에서 synced 라벨을 제외하지 않으므로 같은 Gmail 스레드 안에 확정 후 취소 메일이 들어와도 새 messageId 기준으로 다시 처리합니다.
+  - API 실패, 파싱 실패 메일은 1분 동기화 안에서 오류 라벨 기준으로 다시 시도됩니다.
+  - `nununanu_naver_booking_synced` / `nununanu_naver_booking_error` 라벨은 사람이 확인하기 위한 표시용입니다. 검색에서 synced 라벨을 제외하지 않으므로 같은 Gmail 스레드 안에 확정 후 취소 메일이 들어와도 새 messageId 기준으로 다시 처리합니다. 오류 라벨은 일반 1분 트리거에서 소량 자동 재시도됩니다.
   - 처리 이력은 `naver_booking_mail_events`, 예약번호 연결은 `naver_booking_links`에 남습니다.
 
 ## Supabase SQL
@@ -63,7 +63,11 @@ NAVER_GMAIL_SYNC_URL=https://nununanu-app.vercel.app/api/naver-gmail-sync
 NAVER_GMAIL_SYNC_SECRET=Vercel에 설정한 값과 동일한 값
 NAVER_LOOKBACK_DAYS=30
 NAVER_SYNC_MAX_THREADS=100
-NAVER_BACKFILL_MAX_THREADS=1000
+NAVER_SYNC_MAX_MESSAGES=20
+NAVER_ERROR_RETRY_MAX_THREADS=50
+NAVER_ERROR_RETRY_MAX_MESSAGES=10
+NAVER_BACKFILL_MAX_THREADS=50
+NAVER_BACKFILL_MAX_MESSAGES=20
 ```
 
 Google Calendar 자동 등록도 같은 프로젝트에서 유지하려면 기존 값도 유지합니다.
@@ -77,7 +81,7 @@ SUPABASE_KEY=Supabase publishable/anon key 또는 secret key
 
 1. `syncNaverBookingEmails`를 수동 실행해서 Gmail 권한과 API 연결을 승인합니다.
 2. 에러가 없으면 `installNaverBookingTrigger`를 1회 실행합니다.
-3. 기존 수신 메일 전체를 다시 반영하려면 `backfillAllCurrentNaverBookingEmails`를 수동 실행합니다.
+3. 기존 수신 메일 전체를 다시 반영하려면 `backfillAllCurrentNaverBookingEmails`를 수동 실행합니다. 이 수동 재처리는 과거 알림이 한꺼번에 울리지 않도록 알림 큐를 억제합니다.
 4. Google Calendar 트리거가 필요하면 `installGoogleCalendarTrigger`를 1회 실행합니다.
 
 ## 확인 위치
