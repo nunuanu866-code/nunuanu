@@ -282,22 +282,25 @@ function writeAuthSession(session){localStorage.setItem(AUTH_KEY,JSON.stringify(
 function parseStaffAuthRow(row){
   if(!row)return null;
   const source=row.customers||row;
-  const rawMemo=row.service_detail===STAFF_AUTH_SERVICE?row.customer_memo:source.memo||row.memo;
+  const isAuthBooking=row.service_detail===STAFF_AUTH_SERVICE;
+  const rawMemo=isAuthBooking?row.customer_memo:source.memo||row.memo;
   let meta={};
   try{meta=JSON.parse(rawMemo||'{}')||{};}catch{}
-  if(row.service_detail!==STAFF_AUTH_SERVICE&&meta.type!=='staff_auth'&&!String(source.phone||'').startsWith(STAFF_AUTH_PREFIX))return null;
-  const status=row.service_detail===STAFF_AUTH_SERVICE
+  if(!isAuthBooking&&meta.type!=='staff_auth'&&!String(source.phone||'').startsWith(STAFF_AUTH_PREFIX))return null;
+  const status=isAuthBooking
     ? (row.status==='confirmed'?'approved':row.status==='rejected'?'rejected':'pending')
     : (meta.status||'pending');
+  const rawPin=isAuthBooking?(meta.pin||row.pin||source.pin||''):(source.pin||row.pin||meta.pin||'');
+  const rawStaffId=isAuthBooking?(meta.staff_id||meta.staffId||row.requested_staff_id||null):(row.requested_staff_id||meta.staff_id||meta.staffId||null);
   return{
     id:row.id,
     customerId:source.id||row.customer_id||null,
     row,
     name:meta.name||String(source.name||'').replace(/^\[스텝승인\]\s*/,''),
     phone:meta.phone||String(source.phone||'').replace(STAFF_AUTH_PREFIX,''),
-    pin:source.pin||row.pin||meta.pin||'',
+    pin:String(rawPin||'').replace(/\D/g,'').slice(0,4),
     status,
-    staffId:row.requested_staff_id||meta.staff_id||meta.staffId||null,
+    staffId:rawStaffId,
     requestedAt:meta.requested_at||row.created_at||source.created_at,
     approvedAt:meta.approved_at||null,
     rejectedAt:meta.rejected_at||null
@@ -776,6 +779,37 @@ function virtualStaffRow(staffId,profile={},bookingVisible=true){
     booking_visible:bookingVisible,
     _virtual:true
   };
+}
+function mergedActiveStaffRows(staffRows,profileRows,visibilityRows=[]){
+  const profileByStaff=staffProfileMap(profileRows);
+  const visibilityByStaff=staffVisibilityMap(visibilityRows);
+  const realRows=(staffRows||[]).map(s=>{
+    const profileEntry=profileByStaff.get(s.id);
+    const profile=profileEntry?.profile||{};
+    const hasProfileOverride=!!profileEntry;
+    const hasFullPermission=hasProfileOverride?staffHasFullPermission(profile):staffHasFullPermission(s);
+    return{
+      ...s,
+      ...profile,
+      name:profile.name||s.name,
+      role:staffRoleCode(profile.role||s.role),
+      title:profile.title||s.title||staffTitleDefault(profile.role||s.role),
+      color:profile.color||s.color,
+      phone:profile.phone||s.phone||'',
+      permission_level:hasFullPermission?'full':'view_only',
+      is_admin:hasFullPermission,
+      is_active:profile.is_active!==false&&s.is_active!==false,
+      booking_visible:visibilityByStaff.has(s.id)?visibilityByStaff.get(s.id).bookingVisible:true,
+      _virtual:false
+    };
+  }).filter(s=>s.is_active!==false);
+  const realIds=new Set(realRows.map(s=>s.id));
+  const virtualRows=[];
+  profileByStaff.forEach((entry,staffId)=>{
+    if(realIds.has(staffId)||entry.profile?.is_active===false)return;
+    virtualRows.push(virtualStaffRow(staffId,entry.profile,visibilityByStaff.has(staffId)?visibilityByStaff.get(staffId).bookingVisible:true));
+  });
+  return[...realRows,...virtualRows];
 }
 function isRealStaffReference(staffList,staffId){
   return isUuid(staffId)&&(staffList||[]).some(s=>s.id===staffId&&s._virtual!==true);
@@ -6622,17 +6656,22 @@ function LoginScreen({onLogin}){
     if(pin.length!==4){setErr('승인받은 4자리 비밀번호를 입력하세요');return;}
     setBusy(true);
     try{
-      const rows=await sbGet(`bookings?select=*,customers(id,name,phone,pin,memo)&service_detail=eq.${STAFF_AUTH_SERVICE}&status=eq.confirmed&order=created_at.desc`);
-      const approved=(rows||[]).map(parseStaffAuthRow).filter(x=>x&&x.status==='approved');
-      const matchedAuth=approved.find(x=>x.pin===pin);
-      if(!matchedAuth){setErr('승인된 스텝 계정을 찾을 수 없습니다. 승인 요청 후 관리자의 승인을 기다려주세요.');return;}
-      const auth=matchedAuth;
-      const [staffRows,profileRows]=await Promise.all([
+      const [rows,staffRows,profileRows]=await Promise.all([
+        sbGet(`bookings?select=*,customers(id,name,phone,pin,memo)&service_detail=eq.${STAFF_AUTH_SERVICE}&status=eq.confirmed&order=created_at.desc`),
         sbGet('staff?select=*&is_active=eq.true&order=created_at.asc'),
         sbGet(`bookings?select=id,customer_id,status,service_detail,customer_memo,created_at&service_detail=eq.${STAFF_PROFILE_SERVICE}&order=created_at.desc&limit=1000`)
       ]);
-      const matched=staffRows.find(s=>s.id===auth.staffId)||staffRows.find(s=>s.name===auth.name);
-      if(!matched){setErr('연결된 스텝 정보를 찾을 수 없습니다. 관리자에게 다시 승인 요청해주세요.');return;}
+      const approved=(rows||[]).map(parseStaffAuthRow).filter(x=>x&&x.status==='approved');
+      const pinMatches=approved.filter(x=>x.pin===pin);
+      if(!pinMatches.length){setErr('승인된 스텝 계정을 찾을 수 없습니다. 승인 요청 후 관리자의 승인을 기다려주세요.');return;}
+      const directory=mergedActiveStaffRows(staffRows,profileRows);
+      const normalizeName=v=>String(v||'').trim().replace(/\s+/g,'');
+      const resolved=pinMatches.map(auth=>({
+        auth,
+        staff:directory.find(s=>s.id===auth.staffId)||directory.find(s=>normalizeName(s.name)===normalizeName(auth.name))
+      })).find(item=>item.staff);
+      if(!resolved){setErr('승인 계정과 연결된 활성 스텝 정보를 찾을 수 없습니다. 관리자에게 스텝 연결을 확인해주세요.');return;}
+      const{auth,staff:matched}=resolved;
       const profileEntry=staffProfileMap(profileRows).get(matched.id);
       const profile=profileEntry?.profile||{};
       const hasFullPermission=profileEntry?staffHasFullPermission(profile):staffHasFullPermission(matched);
@@ -6640,6 +6679,9 @@ function LoginScreen({onLogin}){
       const session={role:'staff',name:merged.name||matched.name,staffId:matched.id,phone:auth.phone,permission:staffHasFullPermission(merged)?'full':'view_only'};
       writeAuthSession(session);
       onLogin(session);
+    }catch(e){
+      console.warn('[staff login failed]',e);
+      setErr('스텝 로그인 정보를 불러오지 못했습니다. 네트워크를 확인한 뒤 다시 시도해주세요.');
     }finally{
       setBusy(false);
     }
@@ -6915,31 +6957,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
     profileByStaff.forEach((v,staffId)=>{mergedProfiles[staffId]=v.profile;});
     LS.set(LS_STAFF_VIS,mergedVisibility);
     LS.set(LS_STAFF_PROFILE,mergedProfiles);
-    const realRows=(data||[]).map(s=>{
-      const profileEntry=profileByStaff.get(s.id);
-      const hasProfileOverride=Object.prototype.hasOwnProperty.call(mergedProfiles,s.id);
-      const profile=mergedProfiles[s.id]||{};
-      const hasFullPermission=hasProfileOverride?staffHasFullPermission(profile):staffHasFullPermission(s);
-      return{
-        ...s,
-        ...profile,
-        name:profile.name||s.name,
-        role:staffRoleCode(profile.role||s.role),
-        title:profile.title||s.title||staffTitleDefault(profile.role||s.role),
-        color:profile.color||s.color,
-        phone:profile.phone||s.phone||'',
-        permission_level:hasFullPermission?'full':'view_only',
-        is_admin:hasFullPermission,
-        is_active:profile.is_active!==false&&s.is_active!==false,
-        booking_visible:Object.prototype.hasOwnProperty.call(mergedVisibility,s.id)?mergedVisibility[s.id]:true,
-        _virtual:false
-      };
-    }).filter(s=>s.is_active!==false);
-    const realIds=new Set(realRows.map(s=>s.id));
-    const virtualRows=Object.entries(mergedProfiles)
-      .filter(([staffId,profile])=>!realIds.has(staffId)&&profile?.is_active!==false)
-      .map(([staffId,profile])=>virtualStaffRow(staffId,profile,Object.prototype.hasOwnProperty.call(mergedVisibility,staffId)?mergedVisibility[staffId]:true));
-    const rows=[...realRows,...virtualRows];
+    const rows=mergedActiveStaffRows(data,profileRows,visibilityRows);
     if(rows.length>0){
       setStaff(rows);
       LS.set(LS_STAFF,rows);
@@ -7384,6 +7402,11 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
 
   const approveStaffAuth=useCallback(async(req,staffId)=>{
     if(!canManageStaffPermissions||!req?.id||!staffId)return;
+    const selectedStaff=(staff||[]).find(s=>s.id===staffId&&s.is_active!==false);
+    if(!selectedStaff){
+      setToast({title:'스텝 권한 승인 실패',sub:'선택한 스텝이 현재 활성 명단에 없습니다. 명단을 새로고침한 뒤 다시 선택해주세요.'});
+      return;
+    }
     const updates={
       status:'confirmed',
       customer_memo:staffAuthMemo({status:'approved',name:req.name,phone:req.phone,pin:req.pin,staffId,requestedAt:req.requestedAt,approvedAt:new Date().toISOString()})
@@ -7391,11 +7414,19 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
     if(isRealStaffReference(staff,staffId))updates.requested_staff_id=staffId;
     const ok=await sbPatch('bookings',req.id,updates);
     if(ok){
+      const savedRows=await sbGet(`bookings?select=*,customers(id,name,phone,pin,memo)&id=eq.${encodeURIComponent(req.id)}&limit=1`);
+      const savedAuth=parseStaffAuthRow(savedRows?.[0]);
+      const persisted=savedAuth?.status==='approved'&&savedAuth.staffId===staffId&&savedAuth.pin===String(req.pin||'').replace(/\D/g,'').slice(0,4);
+      if(!persisted){
+        await loadStaffAuthRows();
+        setToast({title:'스텝 권한 승인 저장 확인 실패',sub:'승인 정보가 서버에 완전하게 저장되지 않았습니다. 다시 승인해주세요.'});
+        return;
+      }
       await notifyApp({bookingId:req.id,phone:req.phone,type:'staff_approval_confirmed'});
       await loadStaffAuthRows();
       setToast({title:req.name+' 스텝 권한 승인',sub:'이제 비밀번호 4자리로 로그인할 수 있습니다'});
     }
-  },[canManageStaffPermissions,loadStaffAuthRows]);
+  },[canManageStaffPermissions,loadStaffAuthRows,staff]);
 
   const rejectStaffAuth=useCallback(async(req)=>{
     if(!canManageStaffPermissions||!req?.id)return;
