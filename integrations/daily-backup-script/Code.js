@@ -1,18 +1,12 @@
 const BACKUP_FOLDER_NAME = 'nununanu-supabase-backups';
-const SUPABASE_URL_DEFAULT = 'https://lwllncasntzevgidsdro.supabase.co';
-const SUPABASE_KEY_DEFAULT = 'sb_publishable_vr-2EUl7GP1ulBbDw5unMA_PVab-v46';
 const BACKUP_TABLES = [
-  { name: 'customers', query: 'select=*&order=created_at.desc' },
-  { name: 'bookings', query: 'select=*&order=created_at.desc' },
-  { name: 'staff', query: 'select=*&order=created_at.asc' }
+  { name: 'customers', query: 'select=*&order=created_at.desc', required: true },
+  { name: 'bookings', query: 'select=*&order=created_at.desc', required: true },
+  { name: 'staff', query: 'select=*&order=created_at.asc', required: true },
+  { name: 'naver_booking_mail_events', query: 'select=*&order=received_at.desc', required: true },
+  { name: 'naver_booking_links', query: 'select=*&order=created_at.desc', required: true },
+  { name: 'push_notification_events', query: 'select=*&order=created_at.desc', required: false }
 ];
-
-function setupNununanuBackupProperties() {
-  PropertiesService.getScriptProperties().setProperties({
-    SUPABASE_URL: SUPABASE_URL_DEFAULT,
-    SUPABASE_KEY: SUPABASE_KEY_DEFAULT
-  }, true);
-}
 
 function getBackupConfig_() {
   const props = PropertiesService.getScriptProperties();
@@ -64,13 +58,20 @@ function runNununanuSupabaseBackup() {
   const exportedAt = new Date();
   const backup = {
     app: 'nununanu-reservation',
+    backup_version: 2,
     exported_at: exportedAt.toISOString(),
     project_ref: 'lwllncasntzevgidsdro',
+    errors: {},
     tables: {}
   };
 
   BACKUP_TABLES.forEach(t => {
-    backup.tables[t.name] = fetchSupabaseAll_(t.name, t.query);
+    try {
+      backup.tables[t.name] = fetchSupabaseAll_(t.name, t.query);
+    } catch (error) {
+      backup.errors[t.name] = String(error && error.message ? error.message : error);
+      if (t.required) throw error;
+    }
   });
 
   backup.counts = Object.keys(backup.tables).reduce((acc, name) => {
@@ -104,6 +105,5 @@ function installDailyNununanuBackupTrigger() {
 }
 
 function testNununanuSupabaseBackup() {
-  setupNununanuBackupProperties();
   return runNununanuSupabaseBackup();
 }

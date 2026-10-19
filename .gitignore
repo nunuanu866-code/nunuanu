@@ -2,9 +2,12 @@ node_modules
 dist
 .env
 .env.local
+.env.*
+!.env.example
 .DS_Store
 
 .vercel
+.clasp.json
 *.mjs
 .env
 *.log
@@ -16,3 +19,11 @@ backups/
 patch_*.cjs
 DESIGN-*.md
 DESIGN_AUDIT_*.md
+
+# Credentials and private keys must never be committed.
+*-firebase-adminsdk-*.json
+*service-account*.json
+*.pem
+*.p12
+*.pfx
+*.key

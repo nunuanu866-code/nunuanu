@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "check": "npm run lint && npm run build",
+    "audit:tables": "node scripts/audit-table-counts.js",
+    "smoke": "node scripts/smoke-routes.js",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,7 +18,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.15.1",
+    "react-router-dom": "^7.18.4",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
