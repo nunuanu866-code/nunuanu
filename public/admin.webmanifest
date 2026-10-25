@@ -3,7 +3,7 @@
   "short_name": "누누아누",
   "description": "누누아누 관리자 예약 스케줄 앱",
   "id": "/admin.html",
-  "start_url": "/admin.html?v=20260707-mobile-timeline-stabilize",
+  "start_url": "/admin.html",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f6f5f2",
