@@ -36,12 +36,13 @@
 
 ## 서버 설정
 
-Vercel Production에서는 자동으로 제공되는 `VERCEL_OIDC_TOKEN`을 사용해 AI Gateway에
-연결하므로 별도 API 키가 필수는 아닙니다. 모델을 바꿀 때만 다음 환경변수를 설정합니다.
+운영 환경은 `GEMINI_API_KEY`가 있으면 Google AI Studio 무료 등급을 우선 사용합니다.
+모델을 바꿀 때만 `GEMINI_VISION_MODEL`을 설정합니다.
 
 ```text
-SCHEDULE_VISION_MODEL=gpt-6.1-terra
+GEMINI_VISION_MODEL=gemini-3.8-flash
 ```
 
-Vercel 외부에서 직접 실행할 때만 서버 전용 `OPENAI_API_KEY`를 사용할 수 있습니다.
-`OPENAI_API_KEY`는 HTML, Git 또는 클라이언트 환경변수에 넣지 않습니다.
+Gemini 키가 없으면 서버 전용 `OPENAI_API_KEY` 또는 Vercel에서 자동 제공되는
+`VERCEL_OIDC_TOKEN`을 통한 AI Gateway를 예비 경로로 사용합니다. 모든 제공자 키는
+HTML, Git 또는 클라이언트 환경변수에 넣지 않습니다.

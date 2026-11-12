@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY || '';
 const CONFIGURED_MODEL = process.env.SCHEDULE_VISION_MODEL || 'gpt-6.1-terra';
+const GEMINI_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3.8-flash';
 const MAX_IMAGE_BYTES = 3_800_000;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const requestTimes = new Map();
@@ -61,13 +63,20 @@ function resolveAiAuth(req) {
   const oidcToken = String(req.headers['x-vercel-oidc-token'] || process.env.VERCEL_OIDC_TOKEN || '').trim();
   const gatewayToken = AI_GATEWAY_API_KEY || oidcToken;
   const useGateway = !OPENAI_API_KEY && Boolean(gatewayToken);
+  if (OPENAI_API_KEY) {
+    return { provider: 'openai', token: OPENAI_API_KEY, useGateway: false, model: CONFIGURED_MODEL, auth: 'openai' };
+  }
+  if (GEMINI_API_KEY) {
+    return { provider: 'gemini', token: GEMINI_API_KEY, useGateway: false, model: GEMINI_MODEL, auth: 'gemini_free' };
+  }
   return {
-    token: OPENAI_API_KEY || gatewayToken,
+    provider: 'openai',
+    token: gatewayToken,
     useGateway,
     model: useGateway && !CONFIGURED_MODEL.includes('/')
       ? `openai/${CONFIGURED_MODEL}`
       : CONFIGURED_MODEL,
-    auth: OPENAI_API_KEY ? 'openai' : gatewayToken ? (AI_GATEWAY_API_KEY ? 'ai_gateway_key' : 'vercel_oidc') : null,
+    auth: gatewayToken ? (AI_GATEWAY_API_KEY ? 'ai_gateway_key' : 'vercel_oidc') : null,
   };
 }
 
@@ -103,12 +112,74 @@ function parseImageData(value) {
 
 function outputText(payload) {
   if (typeof payload?.output_text === 'string') return payload.output_text;
+  for (const step of [...(payload?.steps || [])].reverse()) {
+    if (step?.type !== 'model_output') continue;
+    for (const part of step?.content || []) {
+      if (typeof part?.text === 'string') return part.text;
+    }
+  }
   for (const item of payload?.output || []) {
     for (const part of item?.content || []) {
       if (typeof part?.text === 'string') return part.text;
     }
   }
   return '';
+}
+
+function providerRequest(aiAuth, image, staffNames) {
+  if (aiAuth.provider === 'gemini') {
+    return {
+      url: 'https://generativelanguage.googleapis.com/v1beta2/interactions',
+      options: {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': aiAuth.token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: aiAuth.model,
+          input: [
+            { type: 'text', text: prompt(staffNames) },
+            { type: 'image', data: image.bytes.toString('base64'), mime_type: image.mime }
+          ],
+          response_format: {
+            type: 'text',
+            mime_type: 'application/json',
+            schema: OUTPUT_SCHEMA
+          }
+        })
+      }
+    };
+  }
+
+  return {
+    url: aiAuth.useGateway ? 'https://ai-gateway.vercel.sh/v1/responses' : 'https://api.openai.com/v1/responses',
+    options: {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${aiAuth.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: aiAuth.model,
+        input: [{
+          role: 'user',
+          content: [
+            { type: 'input_text', text: prompt(staffNames) },
+            { type: 'input_image', image_url: image.dataUrl, detail: 'high' }
+          ]
+        }],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'nunuanu_daily_schedule',
+            strict: true,
+            schema: OUTPUT_SCHEMA
+          }
+        }
+      })
+    }
+  };
 }
 
 function cleanTime(value) {
@@ -187,35 +258,12 @@ export default async function handler(req, res) {
   if (!image) return send(res, 400, { error: '지원되지 않는 이미지이거나 파일이 너무 큽니다.' });
 
   try {
-    const response = await fetch(aiAuth.useGateway ? 'https://ai-gateway.vercel.sh/v1/responses' : 'https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${aiAuth.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: aiAuth.model,
-        input: [{
-          role: 'user',
-          content: [
-            { type: 'input_text', text: prompt(req.body?.staffNames) },
-            { type: 'input_image', image_url: image.dataUrl, detail: 'high' }
-          ]
-        }],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'nunuanu_daily_schedule',
-            strict: true,
-            schema: OUTPUT_SCHEMA
-          }
-        }
-      })
-    });
+    const request = providerRequest(aiAuth, image, req.body?.staffNames);
+    const response = await fetch(request.url, request.options);
 
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      console.error('[schedule-image-parse] OpenAI error', response.status, payload?.error?.code || payload?.error?.type || 'unknown');
+      console.error('[schedule-image-parse] provider error', aiAuth.auth, response.status, payload?.error?.code || payload?.error?.status || payload?.error?.type || 'unknown');
       return send(res, 502, { error: '문서 분석 서비스 호출에 실패했습니다.', detail: payload?.error?.message || '' });
     }
 
