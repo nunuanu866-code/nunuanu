@@ -1,7 +1,12 @@
 import crypto from 'node:crypto';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const VISION_MODEL = process.env.SCHEDULE_VISION_MODEL || 'gpt-6.1-terra';
+const AI_GATEWAY_TOKEN = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '';
+const USE_AI_GATEWAY = !OPENAI_API_KEY && Boolean(AI_GATEWAY_TOKEN);
+const CONFIGURED_MODEL = process.env.SCHEDULE_VISION_MODEL || 'gpt-6.1-terra';
+const VISION_MODEL = USE_AI_GATEWAY && !CONFIGURED_MODEL.includes('/')
+  ? `openai/${CONFIGURED_MODEL}`
+  : CONFIGURED_MODEL;
 const MAX_IMAGE_BYTES = 3_800_000;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const requestTimes = new Map();
@@ -156,21 +161,25 @@ Extraction rules:
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'GET') {
-    return send(res, 200, { configured: Boolean(OPENAI_API_KEY), model: OPENAI_API_KEY ? VISION_MODEL : null });
+    return send(res, 200, {
+      configured: Boolean(OPENAI_API_KEY || AI_GATEWAY_TOKEN),
+      model: OPENAI_API_KEY || AI_GATEWAY_TOKEN ? VISION_MODEL : null,
+      auth: OPENAI_API_KEY ? 'openai' : AI_GATEWAY_TOKEN ? 'vercel_oidc' : null
+    });
   }
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
   if (!sameOrigin(req)) return send(res, 403, { error: '허용되지 않은 요청입니다.' });
   if (rateLimited(req)) return send(res, 429, { error: '잠시 후 다시 분석해주세요.' });
-  if (!OPENAI_API_KEY) return send(res, 503, { error: '사진 분석 서버 설정이 완료되지 않았습니다.', code: 'VISION_NOT_CONFIGURED' });
+  if (!OPENAI_API_KEY && !AI_GATEWAY_TOKEN) return send(res, 503, { error: '사진 분석 서버 설정이 완료되지 않았습니다.', code: 'VISION_NOT_CONFIGURED' });
 
   const image = parseImageData(req.body?.imageData);
   if (!image) return send(res, 400, { error: '지원되지 않는 이미지이거나 파일이 너무 큽니다.' });
 
   try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
+    const response = await fetch(USE_AI_GATEWAY ? 'https://ai-gateway.vercel.sh/v1/responses' : 'https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY || AI_GATEWAY_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

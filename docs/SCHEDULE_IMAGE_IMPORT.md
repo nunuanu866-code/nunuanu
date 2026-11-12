@@ -36,11 +36,12 @@
 
 ## 서버 설정
 
-Vercel Production 환경변수에 다음 값을 서버 전용으로 등록합니다.
+Vercel Production에서는 자동으로 제공되는 `VERCEL_OIDC_TOKEN`을 사용해 AI Gateway에
+연결하므로 별도 API 키가 필수는 아닙니다. 모델을 바꿀 때만 다음 환경변수를 설정합니다.
 
 ```text
-OPENAI_API_KEY=...
 SCHEDULE_VISION_MODEL=gpt-6.1-terra
 ```
 
+Vercel 외부에서 직접 실행할 때만 서버 전용 `OPENAI_API_KEY`를 사용할 수 있습니다.
 `OPENAI_API_KEY`는 HTML, Git 또는 클라이언트 환경변수에 넣지 않습니다.
