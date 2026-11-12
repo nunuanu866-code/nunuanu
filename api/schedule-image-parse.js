@@ -1,12 +1,8 @@
 import crypto from 'node:crypto';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const AI_GATEWAY_TOKEN = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '';
-const USE_AI_GATEWAY = !OPENAI_API_KEY && Boolean(AI_GATEWAY_TOKEN);
+const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY || '';
 const CONFIGURED_MODEL = process.env.SCHEDULE_VISION_MODEL || 'gpt-6.1-terra';
-const VISION_MODEL = USE_AI_GATEWAY && !CONFIGURED_MODEL.includes('/')
-  ? `openai/${CONFIGURED_MODEL}`
-  : CONFIGURED_MODEL;
 const MAX_IMAGE_BYTES = 3_800_000;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const requestTimes = new Map();
@@ -59,6 +55,20 @@ const OUTPUT_SCHEMA = {
 
 function send(res, status, body) {
   res.status(status).json(body);
+}
+
+function resolveAiAuth(req) {
+  const oidcToken = String(req.headers['x-vercel-oidc-token'] || process.env.VERCEL_OIDC_TOKEN || '').trim();
+  const gatewayToken = AI_GATEWAY_API_KEY || oidcToken;
+  const useGateway = !OPENAI_API_KEY && Boolean(gatewayToken);
+  return {
+    token: OPENAI_API_KEY || gatewayToken,
+    useGateway,
+    model: useGateway && !CONFIGURED_MODEL.includes('/')
+      ? `openai/${CONFIGURED_MODEL}`
+      : CONFIGURED_MODEL,
+    auth: OPENAI_API_KEY ? 'openai' : gatewayToken ? (AI_GATEWAY_API_KEY ? 'ai_gateway_key' : 'vercel_oidc') : null,
+  };
 }
 
 function sameOrigin(req) {
@@ -160,30 +170,31 @@ Extraction rules:
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+  const aiAuth = resolveAiAuth(req);
   if (req.method === 'GET') {
     return send(res, 200, {
-      configured: Boolean(OPENAI_API_KEY || AI_GATEWAY_TOKEN),
-      model: OPENAI_API_KEY || AI_GATEWAY_TOKEN ? VISION_MODEL : null,
-      auth: OPENAI_API_KEY ? 'openai' : AI_GATEWAY_TOKEN ? 'vercel_oidc' : null
+      configured: Boolean(aiAuth.token),
+      model: aiAuth.token ? aiAuth.model : null,
+      auth: aiAuth.auth
     });
   }
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
   if (!sameOrigin(req)) return send(res, 403, { error: '허용되지 않은 요청입니다.' });
   if (rateLimited(req)) return send(res, 429, { error: '잠시 후 다시 분석해주세요.' });
-  if (!OPENAI_API_KEY && !AI_GATEWAY_TOKEN) return send(res, 503, { error: '사진 분석 서버 설정이 완료되지 않았습니다.', code: 'VISION_NOT_CONFIGURED' });
+  if (!aiAuth.token) return send(res, 503, { error: '사진 분석 서버 설정이 완료되지 않았습니다.', code: 'VISION_NOT_CONFIGURED' });
 
   const image = parseImageData(req.body?.imageData);
   if (!image) return send(res, 400, { error: '지원되지 않는 이미지이거나 파일이 너무 큽니다.' });
 
   try {
-    const response = await fetch(USE_AI_GATEWAY ? 'https://ai-gateway.vercel.sh/v1/responses' : 'https://api.openai.com/v1/responses', {
+    const response = await fetch(aiAuth.useGateway ? 'https://ai-gateway.vercel.sh/v1/responses' : 'https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY || AI_GATEWAY_TOKEN}`,
+        Authorization: `Bearer ${aiAuth.token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: VISION_MODEL,
+        model: aiAuth.model,
         input: [{
           role: 'user',
           content: [
