@@ -6452,7 +6452,242 @@ function SimpleScheduleView({selectedDate,staff,blocks,onClose}){
     </div>
   </div>;
 }
-function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,supaBookings,staff,supaCustomers,setDraft,setEditingId,setFlow,onCalendarImport,onOpenBooking,canEdit=true,staffFilterId=null,staffDayOffs=[],scheduleNotice=null,staffDayOffByDate=null,scheduleNoticeByDate=null,onSaveScheduleNotice,onSimpleView}){
+function ScheduleImageScanner({staff,onClose,onImport}){
+  const[stage,setStage]=useState('intro');
+  const[imageData,setImageData]=useState('');
+  const[analysis,setAnalysis]=useState(null);
+  const[busy,setBusy]=useState(false);
+  const[error,setError]=useState('');
+  const[tilt,setTilt]=useState(null);
+  const streamRef=useRef(null);
+  const videoRef=useRef(null);
+  const cameraAreaRef=useRef(null);
+  const frameRef=useRef(null);
+  const galleryRef=useRef(null);
+
+  const stopCamera=()=>{
+    try{streamRef.current?.getTracks?.().forEach(track=>track.stop());}catch{}
+    streamRef.current=null;
+  };
+  useEffect(()=>()=>stopCamera(),[]);
+  useEffect(()=>{
+    if(stage!=='camera'||!streamRef.current||!videoRef.current)return;
+    videoRef.current.srcObject=streamRef.current;
+    videoRef.current.play?.().catch(()=>{});
+  },[stage]);
+  useEffect(()=>{
+    if(stage!=='camera')return;
+    const onOrientation=e=>{
+      const value=Number(e?.gamma);
+      if(Number.isFinite(value))setTilt(Math.max(-12,Math.min(12,value)));
+    };
+    window.addEventListener('deviceorientation',onOrientation,true);
+    return()=>window.removeEventListener('deviceorientation',onOrientation,true);
+  },[stage]);
+
+  async function startCamera(){
+    setError('');
+    if(!navigator.mediaDevices?.getUserMedia){setError('이 브라우저에서는 카메라 촬영을 지원하지 않습니다. 사진 선택을 이용해주세요.');return;}
+    try{
+      const orientation=window.DeviceOrientationEvent;
+      if(typeof orientation?.requestPermission==='function'){
+        try{await orientation.requestPermission();}catch{}
+      }
+      const stream=await navigator.mediaDevices.getUserMedia({
+        audio:false,
+        video:{facingMode:{ideal:'environment'},width:{ideal:2560},height:{ideal:1920}}
+      });
+      streamRef.current=stream;
+      setStage('camera');
+    }catch(e){
+      console.warn('[schedule scanner camera]',e);
+      setError('카메라를 열 수 없습니다. 브라우저의 카메라 권한을 확인하거나 사진 선택을 이용해주세요.');
+    }
+  }
+
+  function canvasDataUrl(canvas,quality=.9){return canvas.toDataURL('image/jpeg',quality);}
+  function resizeImage(img,maxWidth=1800,maxHeight=2546){
+    const scale=Math.min(1,maxWidth/img.naturalWidth,maxHeight/img.naturalHeight);
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+    canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    canvas.getContext('2d',{alpha:false}).drawImage(img,0,0,canvas.width,canvas.height);
+    return canvasDataUrl(canvas);
+  }
+  function loadDataUrl(url){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=url;});}
+
+  async function chooseImage(file){
+    if(!file)return;
+    setError('');
+    try{
+      const url=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
+      const img=await loadDataUrl(url);
+      setImageData(resizeImage(img));
+      setStage('preview');
+    }catch{setError('사진을 불러오지 못했습니다. 다른 사진을 선택해주세요.');}
+  }
+
+  function capture(){
+    const video=videoRef.current,area=cameraAreaRef.current,frame=frameRef.current;
+    if(!video?.videoWidth||!area||!frame){setError('카메라 준비 중입니다. 잠시 후 다시 촬영해주세요.');return;}
+    const areaRect=area.getBoundingClientRect(),frameRect=frame.getBoundingClientRect();
+    const scale=Math.max(areaRect.width/video.videoWidth,areaRect.height/video.videoHeight);
+    const shownW=video.videoWidth*scale,shownH=video.videoHeight*scale;
+    const offsetX=(shownW-areaRect.width)/2,offsetY=(shownH-areaRect.height)/2;
+    let sx=(frameRect.left-areaRect.left+offsetX)/scale;
+    let sy=(frameRect.top-areaRect.top+offsetY)/scale;
+    let sw=frameRect.width/scale,sh=frameRect.height/scale;
+    sx=Math.max(0,Math.min(video.videoWidth-1,sx));
+    sy=Math.max(0,Math.min(video.videoHeight-1,sy));
+    sw=Math.max(1,Math.min(video.videoWidth-sx,sw));
+    sh=Math.max(1,Math.min(video.videoHeight-sy,sh));
+    const targetW=Math.min(1800,Math.round(sw));
+    const targetH=Math.round(targetW*(sh/sw));
+    const canvas=document.createElement('canvas');
+    canvas.width=targetW;canvas.height=targetH;
+    canvas.getContext('2d',{alpha:false}).drawImage(video,sx,sy,sw,sh,0,0,targetW,targetH);
+    setImageData(canvasDataUrl(canvas,.92));
+    stopCamera();
+    setStage('preview');
+  }
+
+  async function analyze(){
+    if(!imageData||busy)return;
+    setBusy(true);setError('');
+    try{
+      const response=await fetch('/api/schedule-image-parse',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({imageData,staffNames:(staff||[]).map(s=>s.name).filter(Boolean)})
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||'사진 문서 분석에 실패했습니다.');
+      setAnalysis({
+        ...data,
+        rows:(data.rows||[]).map(row=>({...row,enabled:!!(row.customerName&&row.startTime&&row.endTime)}))
+      });
+      setStage('review');
+    }catch(e){setError(e?.message||'사진 문서 분석에 실패했습니다.');}
+    finally{setBusy(false);}
+  }
+
+  function updateRow(index,patch){
+    setAnalysis(prev=>({...prev,rows:prev.rows.map((row,i)=>i===index?{...row,...patch}:row)}));
+  }
+  async function confirmImport(){
+    const enabled=(analysis?.rows||[]).filter(row=>row.enabled);
+    if(!analysis?.date){setError('문서 날짜를 확인해주세요.');return;}
+    if(!enabled.length){setError('업로드할 예약을 한 건 이상 선택해주세요.');return;}
+    setBusy(true);setError('');
+    try{
+      const result=await onImport?.({...analysis,rows:enabled});
+      if(result?.failed)throw new Error(`${result.failed}건 저장에 실패했습니다. 내용을 확인 후 다시 시도해주세요.`);
+      onClose?.();
+    }catch(e){setError(e?.message||'스케줄 저장에 실패했습니다.');}
+    finally{setBusy(false);}
+  }
+
+  const levelOk=tilt!=null&&Math.abs(tilt)<=2;
+  const serviceLabel={hair:'헤어',makeup:'메이크업',both:'헤어+메이크업'};
+  return ReactDOM.createPortal(<div style={{position:'fixed',inset:0,zIndex:300,background:stage==='camera'?'#000':T.surface,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+    {stage==='intro'&&<>
+      <div style={{height:58,padding:'0 16px',paddingTop:'env(safe-area-inset-top,0px)',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${T.line}`}}>
+        <div style={{fontSize:18,fontWeight:900}}>스케줄표 사진 업로드</div>
+        <button onClick={onClose} style={{width:40,height:40,borderRadius:'50%',border:'none',background:T.bg,fontSize:22}}>×</button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'22px 18px 110px',WebkitOverflowScrolling:'touch'}}>
+        <div style={{fontSize:22,fontWeight:900,marginBottom:8}}>A4 문서를 프레임에 맞춰 촬영해주세요</div>
+        <div style={{fontSize:14,color:T.ink2,lineHeight:1.65,marginBottom:18}}>촬영한 사진은 날짜·시간·고객명·M/H·스텝 순서만 분석합니다. 가격과 결제 정보는 저장하지 않습니다.</div>
+        <div style={{background:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:16,padding:16,marginBottom:18}}>
+          <div style={{fontSize:14,fontWeight:900,color:'#9A3412',marginBottom:10}}>정확한 인식을 위한 작성 규칙</div>
+          {[
+            '시간은 09:00-10:30처럼 24시간제로 작성',
+            '고객 한 명은 표의 한 행만 사용',
+            '스텝은 지현·보니·하은 또는 지·보·하로 작성',
+            '헤어는 H, 메이크업은 M으로 또렷하게 표시',
+            '하단 배정은 지현 09:00-09:30 M 형식으로 작성',
+            '수정 전 글자는 한 줄로 완전히 지우고 같은 칸에 재작성',
+            '문서를 평평하게 놓고 그림자와 빛 반사를 피해서 촬영'
+          ].map((text,i)=><div key={i} style={{display:'flex',gap:8,fontSize:13,color:'#7C2D12',lineHeight:1.55,marginTop:i?6:0}}><b>{i+1}.</b><span>{text}</span></div>)}
+        </div>
+        {error&&<div style={{padding:12,borderRadius:12,background:'#FEF2F2',border:'1px solid #FECACA',color:T.danger,fontSize:13,fontWeight:700,marginBottom:14}}>{error}</div>}
+        <button onClick={startCamera} style={{width:'100%',height:54,borderRadius:16,border:'none',background:T.ink,color:'#fff',fontSize:16,fontWeight:900,marginBottom:10}}>카메라로 촬영</button>
+        <button onClick={()=>galleryRef.current?.click()} style={{width:'100%',height:52,borderRadius:16,border:`1px solid ${T.line}`,background:'#fff',color:T.ink,fontSize:15,fontWeight:800}}>사진에서 선택</button>
+        <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{chooseImage(e.target.files?.[0]);e.target.value='';}} style={{display:'none'}}/>
+      </div>
+    </>}
+
+    {stage==='camera'&&<div ref={cameraAreaRef} style={{position:'relative',flex:1,minHeight:0,overflow:'hidden',background:'#000'}}>
+      <video ref={videoRef} playsInline muted style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+      <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,.24)',pointerEvents:'none'}}/>
+      <div ref={frameRef} style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',height:'min(72dvh,680px)',maxHeight:'calc(100dvh - 180px)',aspectRatio:'210/297',maxWidth:'90vw',border:`3px solid ${levelOk?'#34D399':'#fff'}`,boxShadow:'0 0 0 9999px rgba(0,0,0,.28)',borderRadius:8,pointerEvents:'none'}}>
+        {[['0','0','none'],['100%','0','translateX(-100%)'],['0','100%','translateY(-100%)'],['100%','100%','translate(-100%,-100%)']].map((p,i)=><div key={i} style={{position:'absolute',left:p[0],top:p[1],transform:p[2],width:28,height:28,borderTop:i<2?'4px solid #FFD60A':'none',borderBottom:i>=2?'4px solid #FFD60A':'none',borderLeft:i%2===0?'4px solid #FFD60A':'none',borderRight:i%2===1?'4px solid #FFD60A':'none'}}/>)}
+        <div style={{position:'absolute',left:'10%',right:'10%',top:'50%',height:2,background:levelOk?'#34D399':'#FFD60A',transform:`rotate(${tilt||0}deg)`,transformOrigin:'center',boxShadow:'0 0 4px rgba(0,0,0,.8)'}}/>
+      </div>
+      <div style={{position:'absolute',top:'calc(env(safe-area-inset-top,0px) + 12px)',left:12,right:12,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <button onClick={()=>{stopCamera();setStage('intro');}} style={{width:44,height:44,borderRadius:'50%',border:'1px solid rgba(255,255,255,.5)',background:'rgba(0,0,0,.45)',color:'#fff',fontSize:24}}>×</button>
+        <div style={{padding:'8px 12px',borderRadius:999,background:'rgba(0,0,0,.55)',color:levelOk?'#6EE7B7':'#fff',fontSize:13,fontWeight:900}}>{tilt==null?'A4 프레임에 맞춰주세요':levelOk?'수평이 맞습니다':`기울기 ${Math.abs(tilt).toFixed(1)}°`}</div>
+        <div style={{width:44}}/>
+      </div>
+      <div style={{position:'absolute',left:0,right:0,bottom:'calc(env(safe-area-inset-bottom,0px) + 18px)',display:'flex',justifyContent:'center'}}>
+        <button onClick={capture} aria-label="촬영" style={{width:74,height:74,borderRadius:'50%',border:'6px solid #fff',background:'#D1D5DB',boxShadow:'0 2px 12px rgba(0,0,0,.45)'}}/>
+      </div>
+    </div>}
+
+    {stage==='preview'&&<>
+      <div style={{height:58,padding:'0 16px',paddingTop:'env(safe-area-inset-top,0px)',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${T.line}`}}>
+        <div style={{fontSize:18,fontWeight:900}}>촬영 사진 확인</div>
+        <button onClick={onClose} style={{width:40,height:40,borderRadius:'50%',border:'none',background:T.bg,fontSize:22}}>×</button>
+      </div>
+      <div style={{flex:1,minHeight:0,background:'#111',display:'flex',alignItems:'center',justifyContent:'center',padding:12,overflow:'hidden'}}><img src={imageData} alt="촬영한 스케줄표" style={{width:'100%',height:'100%',objectFit:'contain'}}/></div>
+      {error&&<div style={{padding:'10px 16px',background:'#FEF2F2',color:T.danger,fontSize:13,fontWeight:700}}>{error}</div>}
+      <div style={{padding:'12px 16px calc(12px + env(safe-area-inset-bottom,0px))',display:'flex',gap:8,background:'#fff'}}>
+        <button onClick={()=>{setImageData('');setStage('intro');}} disabled={busy} style={{flex:1,height:50,borderRadius:14,border:`1px solid ${T.line}`,background:'#fff',fontSize:14,fontWeight:800}}>다시 촬영</button>
+        <button onClick={analyze} disabled={busy} style={{flex:2,height:50,borderRadius:14,border:'none',background:T.ink,color:'#fff',fontSize:15,fontWeight:900,opacity:busy?.65:1}}>{busy?'문서 분석 중...':'문서 분석하기'}</button>
+      </div>
+    </>}
+
+    {stage==='review'&&analysis&&<>
+      <div style={{padding:'calc(env(safe-area-inset-top,0px) + 10px) 14px 10px',display:'flex',alignItems:'center',gap:10,borderBottom:`1px solid ${T.line}`,background:'#fff'}}>
+        <button onClick={()=>setStage('preview')} style={{width:40,height:40,borderRadius:'50%',border:`1px solid ${T.line}`,background:'#fff',fontSize:22}}>‹</button>
+        <div style={{flex:1,minWidth:0}}><div style={{fontSize:18,fontWeight:900}}>분석 결과 확인</div><div style={{fontSize:12,color:T.ink3,marginTop:2}}>잘못 읽힌 항목을 수정한 후 업로드하세요.</div></div>
+        <button onClick={onClose} style={{width:40,height:40,borderRadius:'50%',border:'none',background:T.bg,fontSize:22}}>×</button>
+      </div>
+      <div style={{flex:1,minHeight:0,overflowY:'auto',padding:'14px 14px 110px',background:T.bg,WebkitOverflowScrolling:'touch'}}>
+        <label className="lbl">예약 날짜</label>
+        <input type="date" className="inp" value={analysis.date||''} onChange={e=>setAnalysis({...analysis,date:e.target.value})} style={{marginBottom:12}}/>
+        {(analysis.documentWarnings||[]).length>0&&<div style={{padding:12,borderRadius:12,background:'#FFF7ED',border:'1px solid #FED7AA',fontSize:12,color:'#9A3412',fontWeight:700,lineHeight:1.55,marginBottom:12}}>{analysis.documentWarnings.join(' · ')}</div>}
+        {(analysis.rows||[]).map((row,index)=>{
+          const low=row.confidence<.75||(row.warnings||[]).length>0;
+          return <div key={`${row.rowIndex}-${index}`} style={{background:'#fff',border:`1.5px solid ${low?'#F59E0B':T.line}`,borderRadius:14,padding:12,marginBottom:10,opacity:row.enabled?1:.55}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+              <input type="checkbox" checked={!!row.enabled} onChange={e=>updateRow(index,{enabled:e.target.checked})} style={{width:20,height:20}}/>
+              <div style={{fontSize:13,fontWeight:900,flex:1}}>예약 {index+1}</div>
+              <div style={{fontSize:11,fontWeight:800,color:low?'#B45309':T.success}}>{Math.round((row.confidence||0)*100)}%</div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+              <input type="time" step="300" className="inp" value={row.startTime||''} onChange={e=>updateRow(index,{startTime:e.target.value})}/>
+              <input type="time" step="300" className="inp" value={row.endTime||''} onChange={e=>updateRow(index,{endTime:e.target.value})}/>
+            </div>
+            <input className="inp" value={row.customerName||''} onChange={e=>updateRow(index,{customerName:e.target.value})} placeholder="고객명" style={{marginBottom:8}}/>
+            <div style={{display:'grid',gridTemplateColumns:'minmax(110px,.7fr) minmax(0,1.3fr)',gap:8,marginBottom:8}}>
+              <select className="sel" value={row.serviceType||'hair'} onChange={e=>updateRow(index,{serviceType:e.target.value})}>{Object.entries(serviceLabel).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
+              <input className="inp" value={(row.staffNames||[]).join(', ')} onChange={e=>updateRow(index,{staffNames:e.target.value.split(/[,/]/).map(v=>v.trim()).filter(Boolean),staffSegments:[]})} placeholder="스텝 순서: 지현, 보니"/>
+            </div>
+            <textarea value={row.memo||''} onChange={e=>updateRow(index,{memo:e.target.value})} placeholder="비고" rows={2} style={{width:'100%',border:`1px solid ${T.line}`,borderRadius:10,padding:'9px 10px',fontSize:13,resize:'vertical',fontFamily:'inherit'}}/>
+            {(row.warnings||[]).length>0&&<div style={{fontSize:11,color:'#B45309',fontWeight:700,lineHeight:1.45,marginTop:7}}>{row.warnings.join(' · ')}</div>}
+          </div>;
+        })}
+      </div>
+      {error&&<div style={{position:'absolute',left:14,right:14,bottom:84,padding:10,borderRadius:10,background:'#FEF2F2',border:'1px solid #FECACA',color:T.danger,fontSize:12,fontWeight:800,zIndex:2}}>{error}</div>}
+      <div style={{position:'absolute',left:0,right:0,bottom:0,padding:'10px 14px calc(10px + env(safe-area-inset-bottom,0px))',background:'#fff',borderTop:`1px solid ${T.line}`}}>
+        <button onClick={confirmImport} disabled={busy} style={{width:'100%',height:52,borderRadius:15,border:'none',background:T.ink,color:'#fff',fontSize:15,fontWeight:900,opacity:busy?.65:1}}>{busy?'일정 저장 중...':`선택 ${(analysis.rows||[]).filter(row=>row.enabled).length}건 확정 업로드`}</button>
+      </div>
+    </>}
+  </div>,document.body);
+}
+
+function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,supaBookings,staff,supaCustomers,setDraft,setEditingId,setFlow,onCalendarImport,onImageScheduleUpload,onOpenBooking,canEdit=true,staffFilterId=null,staffDayOffs=[],scheduleNotice=null,staffDayOffByDate=null,scheduleNoticeByDate=null,onSaveScheduleNotice,onSimpleView}){
   const[showCal,setShowCal]=useState(false);
   const[importing,setImporting]=useState(false);
   const[noticeEdit,setNoticeEdit]=useState(false);
@@ -6543,6 +6778,7 @@ function Header({selectedDate,setSelectedDate,blockCount,staffCount,loadingBkg,s
       <div className="schedule-header-actions" style={{display:'flex',alignItems:'center',gap:8,marginLeft:10,flexWrap:'wrap',justifyContent:'flex-end'}}>
         <button onClick={onSimpleView} style={{height:36,padding:'0 11px',borderRadius:10,border:`1px solid ${T.ink}`,background:T.ink,color:'#fff',fontSize:12,fontWeight:900,cursor:'pointer',whiteSpace:'nowrap'}}>간단 보기</button>
         {canEdit&&<>
+          <button onClick={onImageScheduleUpload} style={{height:36,padding:'0 11px',borderRadius:10,border:`1px solid ${T.line}`,background:T.bg,color:T.ink2,fontSize:12,fontWeight:800,cursor:'pointer',whiteSpace:'nowrap'}}>사진 스케줄 업로드</button>
           <input ref={fileRef} type="file" accept=".ics,.ical,text/calendar" onChange={handleCalendarFile} style={{display:'none'}}/>
           <button onClick={()=>fileRef.current?.click()} disabled={importing} style={{height:36,padding:'0 11px',borderRadius:10,border:`1px solid ${T.line}`,background:T.bg,color:T.ink2,fontSize:12,fontWeight:800,cursor:importing?'default':'pointer',whiteSpace:'nowrap',opacity:importing?.6:1}}>{importing?'업로드 중':'캘린더 업로드'}</button>
         </>}
@@ -6841,6 +7077,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
   const[editingId,setEditingId]=useState(null);
   const[scheduleEdit,setScheduleEdit]=useState(null);
   const[simpleView,setSimpleView]=useState(false);
+  const[imageScannerOpen,setImageScannerOpen]=useState(false);
   const[supaBookings,setSupaBookings]=useState([]);
   const[allPending,setAllPending]=useState([]);
   const[supaCustomers,setSupaCustomers]=useState([]);
@@ -7400,6 +7637,114 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
     setToast({title:`캘린더 일정 ${imported}건 등록`,sub:`건너뜀 ${skipped}건 · 실패 ${failed}건`});
   },[ensureCalendarCustomer,reloadSupaBookings,loadSupaCustomers]);
 
+  const importImageSchedule=useCallback(async(result)=>{
+    const importDate=String(result?.date||'').trim();
+    const sourceHash=String(result?.sourceHash||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,40);
+    const rows=(Array.isArray(result?.rows)?result.rows:[])
+      .filter(row=>row?.enabled!==false&&row?.customerName&&row?.startTime&&row?.endTime)
+      .sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))||Number(a.rowIndex||0)-Number(b.rowIndex||0));
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(importDate)||!sourceHash||!rows.length){
+      throw new Error('날짜와 업로드할 예약 내용을 확인해주세요.');
+    }
+
+    const activeStaff=(staff||[]).filter(item=>item?.id&&item?.is_active!==false);
+    const aliasMap={지:'지현',보:'보니',하:'하은'};
+    const cleanStaffName=value=>String(value||'').replace(/\s+/g,'').replace(/(선생님|쌤|원장님)$/g,'');
+    const resolveStaff=value=>{
+      const raw=cleanStaffName(value);
+      const wanted=aliasMap[raw]||raw;
+      if(!wanted)return null;
+      return activeStaff.find(item=>cleanStaffName(item.name)===wanted)
+        ||activeStaff.find(item=>cleanStaffName(item.name).includes(wanted)||wanted.includes(cleanStaffName(item.name)))
+        ||null;
+    };
+    const segmentLabel=code=>code==='M'?'메이크업':code==='H'?'헤어':code==='WAIT'?'대기시간':'';
+    let imported=0,skipped=0,failed=0;
+    const failureDetails=[];
+
+    for(const row of rows){
+      const rowIndex=Math.max(1,Number(row.rowIndex)||rows.indexOf(row)+1);
+      const importId=`IMAGE_IMPORT_ID:${sourceHash}:${rowIndex}`;
+      try{
+        const duplicate=await sbGet(`bookings?select=id&customer_memo=ilike.${encodeURIComponent('*'+importId+'*')}&limit=1`);
+        if(duplicate?.length){skipped++;continue;}
+
+        const startTime=normalizeHHMM(row.startTime,'09:00');
+        const endTime=normalizeHHMM(row.endTime,'10:00');
+        const totalDuration=rawDurationBetween(startTime,endTime);
+        if(totalDuration<5)throw new Error('종료 시간이 시작 시간보다 늦어야 합니다.');
+
+        let rawSegs=[];
+        const extractedSegments=(Array.isArray(row.staffSegments)?row.staffSegments:[])
+          .slice()
+          .sort((a,b)=>String(a?.startTime||'').localeCompare(String(b?.startTime||'')));
+        if(extractedSegments.length){
+          const resolvedSegments=extractedSegments.map(segment=>{
+            const matched=resolveStaff(segment.staffName);
+            const segmentStart=normalizeHHMM(segment.startTime,startTime);
+            const segmentEnd=normalizeHHMM(segment.endTime,endTime);
+            const withinBooking=minutesFromHHMM(segmentStart)>=minutesFromHHMM(startTime)
+              &&minutesFromHHMM(segmentEnd)<=minutesFromHHMM(endTime);
+            const dur=rawDurationBetween(segmentStart,segmentEnd);
+            if(!withinBooking)return null;
+            return matched&&dur>0?{staffId:matched.id,role:matched.role,label:segmentLabel(segment.serviceCode),dur}:null;
+          });
+          if(resolvedSegments.every(Boolean))rawSegs=resolvedSegments;
+        }
+        if(!rawSegs.length){
+          const matchedNames=(Array.isArray(row.staffNames)?row.staffNames:[]).map(resolveStaff).filter(Boolean);
+          const unique=[];
+          matchedNames.forEach(item=>{if(!unique.some(saved=>saved.id===item.id))unique.push(item);});
+          rawSegs=unique.map(item=>({staffId:item.id,role:item.role,label:row.serviceType==='makeup'?'메이크업':row.serviceType==='hair'?'헤어':'',dur:Math.max(5,Math.floor(totalDuration/unique.length/5)*5)}));
+        }
+        const finalSegs=fitStaffSegsToDuration(rawSegs,totalDuration,5,5);
+        if(!finalSegs.length)throw new Error('스텝을 확인할 수 없습니다. 지현, 보니, 하은 또는 등록된 이름으로 수정해주세요.');
+
+        const identityPhone=`image:${sourceHash}:${rowIndex}`;
+        let customerRows=await sbGet(`customers?select=id,name,phone,pin,memo&phone=eq.${encodeURIComponent(identityPhone)}&limit=1`);
+        let customerId=customerRows?.[0]?.id||null;
+        if(!customerId){
+          customerRows=await sbPost('customers',{
+            name:String(row.customerName).trim(),
+            phone:identityPhone,
+            pin:'0000',
+            memo:'스케줄표 사진 업로드 고객'
+          });
+          customerId=customerRows?.[0]?.id||null;
+        }
+        if(!customerId)throw new Error('고객 정보를 저장하지 못했습니다.');
+
+        const bookingMemo=[String(row.memo||'').trim(),importId,'사진 스케줄표 업로드'].filter(Boolean).join('\n');
+        const created=await sbPost('bookings',{
+          customer_id:customerId,
+          booking_date:importDate,
+          start_time:startTime,
+          end_time:endTime,
+          service_type:['hair','makeup','both'].includes(row.serviceType)?row.serviceType:inferServiceTypeFromSegs(finalSegs,staff),
+          service_detail:bookingDetailFromSegs(finalSegs,staff),
+          requested_staff_id:isRealStaffReference(staff,finalSegs[0]?.staffId)?finalSegs[0].staffId:null,
+          assigned_staff:buildAssignedStaffFromSegs(finalSegs,staff,startTime),
+          staff_sequence:finalSegs,
+          customer_memo:withAdminActionMemo(bookingMemo,'confirm',session,{source:'schedule_image_import'}),
+          status:'confirmed',
+          confirmed_at:new Date().toISOString()
+        });
+        if(created?.[0]?.id)imported++;
+        else throw new Error('예약 저장에 실패했습니다.');
+      }catch(error){
+        console.warn('[schedule image import failed]',row,error);
+        failed++;
+        failureDetails.push(`${row.customerName||`예약 ${rowIndex}`}: ${error?.message||'저장 실패'}`);
+      }
+    }
+
+    const[y,m,d]=importDate.split('-').map(Number);
+    setSelectedDate(new Date(y,m-1,d));
+    await Promise.all([reloadSupaBookings(),loadSupaCustomers()]);
+    setToast({title:`사진 스케줄 ${imported}건 등록`,sub:`중복 건너뜀 ${skipped}건 · 실패 ${failed}건`});
+    return{imported,skipped,failed,failureDetails};
+  },[staff,session,reloadSupaBookings,loadSupaCustomers]);
+
   const approveStaffAuth=useCallback(async(req,staffId)=>{
     if(!canManageStaffPermissions||!req?.id||!staffId)return;
     const selectedStaff=(staff||[]).find(s=>s.id===staffId&&s.is_active!==false);
@@ -7904,7 +8249,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
     />}
     {tab==='today'&&<>
       {simpleView?<SimpleScheduleView selectedDate={selectedDate} staff={visibleStaff} blocks={todayBlocks} onClose={()=>setSimpleView(false)}/>:<>
-        <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={visibleStaff.length} loadingBkg={loadingBkg} supaBookings={visibleSupaBookings} staff={visibleStaff} supaCustomers={supaCustomers} setDraft={setDraft} setEditingId={setEditingId} setFlow={setFlow} onCalendarImport={importCalendarFile} onOpenBooking={openBookingFromMini} canEdit={canEdit} staffFilterId={null} staffDayOffs={selectedDateDayOffs} scheduleNotice={selectedScheduleNotice} staffDayOffByDate={staffDayOffByDate} scheduleNoticeByDate={scheduleNoticeByDate} onSaveScheduleNotice={saveScheduleNotice} onSimpleView={()=>setSimpleView(true)}/>
+        <Header selectedDate={selectedDate} setSelectedDate={setSelectedDate} blockCount={todayBlocks.length} staffCount={visibleStaff.length} loadingBkg={loadingBkg} supaBookings={visibleSupaBookings} staff={visibleStaff} supaCustomers={supaCustomers} setDraft={setDraft} setEditingId={setEditingId} setFlow={setFlow} onCalendarImport={importCalendarFile} onImageScheduleUpload={()=>setImageScannerOpen(true)} onOpenBooking={openBookingFromMini} canEdit={canEdit} staffFilterId={null} staffDayOffs={selectedDateDayOffs} scheduleNotice={selectedScheduleNotice} staffDayOffByDate={staffDayOffByDate} scheduleNoticeByDate={scheduleNoticeByDate} onSaveScheduleNotice={saveScheduleNotice} onSimpleView={()=>setSimpleView(true)}/>
         <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden',position:'relative'}}>
           <Timeline staff={visibleStaff} blocks={todayBlocks} highlightId={highlightId}
             onBlockTap={b=>{if(!flow)setSelectedBlock(b);}}
@@ -7920,6 +8265,7 @@ function AdminApp({session,onSignOut,onSessionUpdate}){
     {tab==='staff'&&<StaffScreen staff={staff} setStaff={setStaff} blocks={todayBlocks} canEdit={canManageStaffPermissions} sessionStaffId={isStaffSession?session?.staffId:null} staffDayOffByDate={staffDayOffByDate} onToggleDayOff={saveStaffDayOff} onRefreshStaff={loadStaff}/>}
     {tab==='cust' &&<CustomerScreen supaCustomers={supaCustomers} supaHistory={supaHistory} onRefresh={()=>Promise.all([loadSupaCustomers(),reloadSupaBookings()])} canEdit={canEdit}/>}
     {tab==='me'   &&<SettingsScreen onSignOut={signOut} googleToken={googleToken} setGoogleToken={setGoogleToken} session={session} staff={staff} staffAuthRows={staffAuthRows} onApproveStaffAuth={approveStaffAuth} onRejectStaffAuth={rejectStaffAuth}/>}
+    {canEdit&&imageScannerOpen&&<ScheduleImageScanner staff={staff} onClose={()=>setImageScannerOpen(false)} onImport={importImageSchedule}/>}
     <TabBar active={tab} setActive={v=>{setTab(v);setSimpleView(false);closeFlow();setSelectedBlock(null);}} pendingCount={allPending.length} staffAuthPendingCount={canManageStaffPermissions?staffAuthRows.filter(r=>r.status==='pending').length:0}/>
     {selectedBlock&&<BlockSheet block={selectedBlock} staff={visibleStaff} onClose={()=>setSelectedBlock(null)} onEdit={()=>openEdit(selectedBlock)} onDelete={()=>deleteBlock(selectedBlock.id)} onConfirm={confirmBooking} onReject={rejectBooking} canEdit={canEdit}/>}
     {canEdit&&scheduleEdit&&<ScheduleBookingEditSheet
