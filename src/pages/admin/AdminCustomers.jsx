@@ -3,6 +3,7 @@ import { supabase, serviceLabel, SALON_PHONE } from '../../lib/supabase'
 import { Card, EmptyState, LoadingSpinner, Badge } from '../../components/ui/index'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { searchPhoneMatches, searchTextMatches } from '../../lib/customerSearch'
 
 // ─────────────────────────────────────────
 // 관리자 고객 관리 (화면 F)
@@ -118,9 +119,7 @@ export function AdminCustomers() {
 
   const filtered = customers.filter(c => {
     if (!search.trim()) return true
-    const q = search.toLowerCase()
-    return c.name?.toLowerCase().includes(q) ||
-           c.phone?.includes(q.replace(/-/g, ''))
+    return searchTextMatches(c.name, search) || searchPhoneMatches(c.phone, search)
   })
 
   const statusColors = { pending: 'amber', confirmed: 'green', rejected: 'red', cancelled: 'gray' }

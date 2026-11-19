@@ -1666,6 +1666,36 @@ const QUICK_TIMES=Array.from({length:24},(_,i)=>`${pad2(i)}:00`);
 
 function simpleHash(text){let h=0;String(text||'').split('').forEach(ch=>{h=((h<<5)-h)+ch.charCodeAt(0);h|=0;});return Math.abs(h).toString(36);}
 function cleanPhoneDigitsFull(v){return String(v||'').replace(/\D/g,'');}
+const HANGUL_INITIALS='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+function normalizeSearchText(value){
+  return String(value||'').normalize('NFC').toLowerCase().replace(/\s+/g,'');
+}
+function hangulInitials(value){
+  return normalizeSearchText(value).split('').map(ch=>{
+    const code=ch.charCodeAt(0);
+    if(code<0xAC00||code>0xD7A3)return ch;
+    return HANGUL_INITIALS[Math.floor((code-0xAC00)/588)]||ch;
+  }).join('');
+}
+function searchTextMatches(value,query){
+  const text=normalizeSearchText(value);
+  const q=normalizeSearchText(query);
+  if(!q)return true;
+  if(text.includes(q))return true;
+  return /^[ㄱ-ㅎ]+$/.test(q)&&hangulInitials(text).includes(q);
+}
+function normalizeSearchPhone(value){
+  let digits=cleanPhoneDigitsFull(value);
+  if(digits.startsWith('0082'))digits='0'+digits.slice(4);
+  else if(digits.startsWith('82'))digits='0'+digits.slice(2);
+  return digits;
+}
+function searchPhoneMatches(value,query){
+  const q=normalizeSearchPhone(query);
+  if(!q)return false;
+  const phone=normalizeSearchPhone(value);
+  return phone.includes(q)||cleanPhoneDigitsFull(value).includes(cleanPhoneDigitsFull(query));
+}
 const LEGACY_LOCAL_BLOCK_PREFIX='LEGACY_LOCAL_BLOCK_ID:';
 function legacyLocalBlockMarker(id){return `${LEGACY_LOCAL_BLOCK_PREFIX}${String(id||'')}`;}
 function normalizeCustomerPhone(raw,name='manual'){
@@ -1960,13 +1990,9 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
   const matchingCustomers=useMemo(()=>{
     const raw=searchQuery.trim();
     if(!raw)return[];
-    const q=raw.toLowerCase();
-    const phoneQuery=cleanPhoneDigitsFull(raw);
     return (supaCustomers||[])
       .filter(c=>{
-        const name=String(c.name||'').toLowerCase();
-        const phone=cleanPhoneDigitsFull(c.phone||'');
-        return name.includes(q)||(phoneQuery&&phone.includes(phoneQuery));
+        return searchTextMatches(c.name,raw)||searchPhoneMatches(c.phone,raw);
       });
   },[searchQuery,supaCustomers]);
 
@@ -1976,18 +2002,16 @@ function MiniCalendar({value,onChange,onClose,supaBookings,staff,supaCustomers,o
     const raw=String(query||'').trim();
     if(!raw)return false;
     if(customerIds.has(b?.customer_id))return true;
-    const q=raw.toLowerCase();
-    const phoneQuery=cleanPhoneDigitsFull(raw);
-    const name=bookingCustomerName(b,'').toLowerCase();
-    const phone=cleanPhoneDigitsFull(bookingCustomerPhone(b));
     const memoText=[
       bookingPlainMemo(b),
       bookingDisplayMemo(b),
       b?.customer_memo,
       b?.memo,
       b?.service_detail
-    ].filter(Boolean).join(' ').toLowerCase();
-    return name.includes(q)||memoText.includes(q)||(phoneQuery&&phone.includes(phoneQuery));
+    ].filter(Boolean).join(' ');
+    return searchTextMatches(bookingCustomerName(b,''),raw)||
+      searchPhoneMatches(bookingCustomerPhone(b),raw)||
+      searchTextMatches(memoText,raw);
   },[]);
 
   const loadSearchBookings=useCallback(async(query,forcedCustomerIds=null)=>{
@@ -3516,12 +3540,8 @@ function S2Customer({draft,set,onNext,onBack,onClose,customers}){
   },[]);
   const matches=useMemo(()=>{
     if(!q)return[];
-    const qLower=q.toLowerCase();
-    const qPhone=q.replace(/\D/g,'');
     return customers.filter(c=>{
-      const name=String(c.name||'').toLowerCase();
-      const phone=String(c.phone||'').replace(/\D/g,'');
-      return name.includes(qLower)||(qPhone&&phone.includes(qPhone));
+      return searchTextMatches(c.name,q)||searchPhoneMatches(c.phone,q);
     }).slice(0,6);
   },[q,customers]);
   const viewportH=viewportFrame.height||(typeof window!=='undefined'?window.innerHeight:640)||640;
@@ -4590,8 +4610,11 @@ function CustomerScreen({supaCustomers,supaHistory,onRefresh,canEdit=true}){
 
   const filtered=useMemo(()=>{
     if(!q.trim())return enriched;
-    const qq=q.toLowerCase().replace(/-/g,'');
-    return enriched.filter(c=>c.name?.includes(q)||c.phone?.replace(/-/g,'').includes(qq)||c.customerNo?.toLowerCase().includes(qq));
+    return enriched.filter(c=>
+      searchTextMatches(c.name,q)||
+      searchPhoneMatches(c.phone,q)||
+      searchTextMatches(c.customerNo,q)
+    );
   },[enriched,q]);
 
 
